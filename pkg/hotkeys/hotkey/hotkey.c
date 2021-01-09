@@ -14,12 +14,12 @@
   static const size_t HOTKEY_REF_SIZE = sizeof(EventHotKeyRef);
 #endif
 
-bool registerHotkey(uint8_t id, uint32_t keyInt) {
+bool registerHotkey(uint8_t id, uint32_t keyIndex) {
   if (!id) {
     return false;
   }
 
-  MouserKeyCode keyCode = keyCodeFromInt(keyInt);
+  MouserKeyCode keyCode = keyCodeFromIndex(keyIndex);
 
   #ifdef MOUSER_OS_MACOS
     uint32_t modifiers = 0;

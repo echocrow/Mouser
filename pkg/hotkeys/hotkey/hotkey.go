@@ -21,7 +21,7 @@ type ID uint8
 
 // Engine describes the interface of a hotkey registry engine.
 type Engine interface {
-	register(id ID, keyInt KeyInt) (ok bool)
+	register(id ID, keyIndex KeyIndex) (ok bool)
 	unregister(id ID)
 }
 
@@ -46,18 +46,18 @@ func NewRegistry(engine Engine, idc *idCounter) Registry {
 }
 
 // Register adds a new hotkey to the reg registry.
-func (reg Registry) Register(key string) (ID, error) {
+func (reg Registry) Register(key KeyName) (ID, error) {
 	if reg.idc == nil {
 		return 0, ErrIncompleteRegistry
 	}
 
-	keyInt, err := KeyToInt(key)
+	keyIndex, err := NameToIndex(key)
 	if err != nil {
 		return 0, err
 	}
 
 	id := reg.idc.nextID()
-	if ok := reg.engine.register(id, keyInt); !ok {
+	if ok := reg.engine.register(id, keyIndex); !ok {
 		return 0, ErrRegistrationFailed
 	}
 
@@ -72,8 +72,8 @@ func (reg Registry) Unregister(id ID) {
 // CEngine implements hotkey engine via C.
 type CEngine struct{}
 
-func (CEngine) register(id ID, keyInt KeyInt) (ok bool) {
-	return bool(C.registerHotkey(C.uchar(id), C.uint(keyInt)))
+func (CEngine) register(id ID, keyIndex KeyIndex) (ok bool) {
+	return bool(C.registerHotkey(C.uchar(id), C.uint(keyIndex)))
 }
 func (CEngine) unregister(id ID) {
 	C.unregisterHotkey(C.uchar(id))

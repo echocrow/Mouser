@@ -37,5 +37,5 @@
   };
 #endif
 
-// Convert a key int to the key code.
-MouserKeyCode keyCodeFromInt(uint32_t keyInt);
+// Convert a key index to the key code.
+MouserKeyCode keyCodeFromIndex(uint32_t keyIndex);

@@ -1,9 +1,13 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include "keycode.h"
 #include "../base/os.h"
 
+// Represent a hotkey ID.
+typedef uint8_t MouserHotKeyID;
+
 // Register a hotkey.
-bool registerHotkey(uint8_t id, uint32_t keyIndex);
+bool registerHotkey(MouserHotKeyID id, MouserKeyIndex keyIndex);
 
 // Unregister a hotkey.
-void unregisterHotkey(uint8_t id);
+void unregisterHotkey(MouserHotKeyID id);

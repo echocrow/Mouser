@@ -37,5 +37,8 @@
   };
 #endif
 
+// Represent a key by its internal index.
+typedef uint32_t MouserKeyIndex;
+
 // Convert a key index to the key code.
-MouserKeyCode keyCodeFromIndex(uint32_t keyIndex);
+MouserKeyCode keyCodeFromIndex(MouserKeyIndex keyIndex);

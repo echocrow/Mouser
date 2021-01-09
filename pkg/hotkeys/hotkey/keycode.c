@@ -32,6 +32,6 @@ static const MouserKeyCode KEY_CODES[] = {
 };
 static const size_t KEY_CODES_LEN = sizeof(KEY_CODES) / sizeof(MouserKeyCode);
 
-MouserKeyCode keyCodeFromIndex(uint32_t keyIndex) {
+MouserKeyCode keyCodeFromIndex(MouserKeyIndex keyIndex) {
   return (keyIndex < KEY_CODES_LEN) ? KEY_CODES[keyIndex] : K_NOT_A_KEY;
 }

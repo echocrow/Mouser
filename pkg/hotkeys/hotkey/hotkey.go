@@ -73,10 +73,10 @@ func (reg Registry) Unregister(id ID) {
 type CEngine struct{}
 
 func (CEngine) register(id ID, keyIndex KeyIndex) (ok bool) {
-	return bool(C.registerHotkey(C.uchar(id), C.uint(keyIndex)))
+	return bool(C.registerHotkey(C.MouserHotKeyID(id), C.MouserKeyIndex(keyIndex)))
 }
 func (CEngine) unregister(id ID) {
-	C.unregisterHotkey(C.uchar(id))
+	C.unregisterHotkey(C.MouserHotKeyID(id))
 }
 
 // idCounter implements a simple incremental ID counter.

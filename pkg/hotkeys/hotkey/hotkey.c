@@ -1,7 +1,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "hotkey.h"
-#include "keycode.h"
 #include "../base/os.h"
 #include "../base/vars.h"
 
@@ -14,7 +13,7 @@
   static const size_t HOTKEY_REF_SIZE = sizeof(EventHotKeyRef);
 #endif
 
-bool registerHotkey(uint8_t id, uint32_t keyIndex) {
+bool registerHotkey(MouserHotKeyID id, MouserKeyIndex keyIndex) {
   if (!id) {
     return false;
   }
@@ -64,7 +63,7 @@ bool registerHotkey(uint8_t id, uint32_t keyIndex) {
   return true;
 }
 
-void unregisterHotkey(uint8_t id) {
+void unregisterHotkey(MouserHotKeyID id) {
   #ifdef MOUSER_OS_MACOS
     EventHotKeyRef hotkeyRef = hotkeyRefs[id - 1];
     if (hotkeyRef) {

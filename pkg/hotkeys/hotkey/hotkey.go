@@ -19,35 +19,46 @@ var (
 // ID holds the ID of a hotkey.
 type ID uint8
 
-// Engine describes the interface of a hotkey registry engine.
+// IDProvider describes a hotkey ID provider.
+type IDProvider interface {
+	nextID() ID
+}
+
+// Engine describes a hotkey registry engine.
 type Engine interface {
 	register(id ID, keyIndex KeyIndex) (ok bool)
 	unregister(id ID)
 }
 
+// Registrar describes a hotkey registrar.
+type Registrar interface {
+	Add(key KeyName) (ID, error)
+	Remove(id ID)
+}
+
 // Registry holds a hotkey registry.
 type Registry struct {
-	idc    *idCounter
+	ipd    IDProvider
 	engine Engine
 }
 
 // NewRegistry constructs a new hotkey registry.
-func NewRegistry(engine Engine, idc *idCounter) Registry {
+func NewRegistry(engine Engine, ipd IDProvider) Registry {
 	if engine == nil {
 		engine = CEngine{}
 	}
-	if idc == nil {
-		idc = newIDCounter()
+	if ipd == nil {
+		ipd = newIDCounter()
 	}
 	return Registry{
-		idc:    idc,
+		ipd:    ipd,
 		engine: engine,
 	}
 }
 
-// Register adds a new hotkey to the reg registry.
-func (reg Registry) Register(key KeyName) (ID, error) {
-	if reg.idc == nil {
+// Add adds a new hotkey to the reg registry.
+func (reg Registry) Add(key KeyName) (ID, error) {
+	if reg.ipd == nil {
 		return 0, ErrIncompleteRegistry
 	}
 
@@ -56,7 +67,7 @@ func (reg Registry) Register(key KeyName) (ID, error) {
 		return 0, err
 	}
 
-	id := reg.idc.nextID()
+	id := reg.ipd.nextID()
 	if ok := reg.engine.register(id, keyIndex); !ok {
 		return 0, ErrRegistrationFailed
 	}
@@ -64,8 +75,8 @@ func (reg Registry) Register(key KeyName) (ID, error) {
 	return id, nil
 }
 
-// Unregister removes a hotkey to the reg registry.
-func (reg Registry) Unregister(id ID) {
+// Remove removes a hotkey to the reg registry.
+func (reg Registry) Remove(id ID) {
 	reg.engine.unregister(id)
 }
 

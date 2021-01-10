@@ -31,7 +31,7 @@ type HotkeyEvent struct {
 	T    time.Time
 }
 
-// Engine describes the interface of a monitor engine.
+// Engine describes a hotkeys monitor engine.
 type Engine interface {
 	initMonitor() (ok bool)
 	startMonitor(m *Monitor) error
@@ -41,7 +41,7 @@ type Engine interface {
 
 // Monitor holds a hotkey monitor.
 type Monitor struct {
-	Hotkeys hotkey.Registry
+	Hotkeys hotkey.Registrar
 	eventCh chan HotkeyEvent
 	doneCh  chan struct{}
 	engine  Engine
@@ -50,7 +50,7 @@ type Monitor struct {
 }
 
 // New constructs a new monitor.
-func New(hkReg hotkey.Registry, engine Engine) *Monitor {
+func New(hkReg hotkey.Registrar, engine Engine) *Monitor {
 	if engine == nil {
 		engine = CEngine{}
 	}

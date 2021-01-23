@@ -70,13 +70,13 @@ func (m *Monitor) Start() (
 		return nil, nil, ErrAlreadyStarted
 	}
 
-	if ok := m.engine.InitMonitor(); !ok {
+	if ok := m.engine.Init(); !ok {
 		return nil, nil, ErrInitFailed
 	}
 
-	err = m.engine.StartMonitor(m)
+	err = m.engine.Start(m)
 	if err != nil {
-		defer m.engine.DeinitMonitor()
+		defer m.engine.Deinit()
 		return nil, nil, err
 	}
 
@@ -99,9 +99,9 @@ func (m *Monitor) Stop() error {
 		return ErrNotYetStarted
 	}
 
-	m.engine.StopMonitor()
+	m.engine.Stop()
 
-	if ok := m.engine.DeinitMonitor(); !ok {
+	if ok := m.engine.Deinit(); !ok {
 		return ErrDeinitFailed
 	}
 
@@ -134,13 +134,13 @@ func (m *Monitor) Dispatch(event HotkeyEvent) error {
 // CEngine implements monitor engine via C.
 type CEngine struct{}
 
-// InitMonitor initializes the engine for monitoring.
-func (CEngine) InitMonitor() (ok bool) {
+// Init initializes the engine for monitoring.
+func (CEngine) Init() (ok bool) {
 	return bool(C.initMonitor())
 }
 
-// StartMonitor starts the engine for monitoring.
-func (CEngine) StartMonitor(m *Monitor) error {
+// Start starts the engine for monitoring.
+func (CEngine) Start(m *Monitor) error {
 	err := setGlobalMonitor(m)
 	if err != nil {
 		return err
@@ -149,14 +149,14 @@ func (CEngine) StartMonitor(m *Monitor) error {
 	return nil
 }
 
-// StopMonitor stops the engine from monitoring.
-func (CEngine) StopMonitor() {
+// Stop stops the engine from monitoring.
+func (CEngine) Stop() {
 	C.stopMonitor()
 	setGlobalMonitor(nil)
 }
 
-// DeinitMonitor deinitializes the engine for monitoring.
-func (CEngine) DeinitMonitor() (ok bool) {
+// Deinit deinitializes the engine for monitoring.
+func (CEngine) Deinit() (ok bool) {
 	return bool(C.deinitMonitor())
 }
 

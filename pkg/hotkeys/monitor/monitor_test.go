@@ -24,10 +24,10 @@ func newMockEngine() (*mocks.Engine, mockEngineFiddler) {
 		eInitOk = initOk
 		eRunOk = runOk
 	}
-	e.On("InitMonitor").Return(func() bool {
+	e.On("Init").Return(func() bool {
 		return eInitOk
 	})
-	e.On("StartMonitor", mock.Anything).Return(
+	e.On("Start", mock.Anything).Return(
 		func(*monitor.Monitor) error {
 			if !eRunOk {
 				return errors.New("some error")
@@ -36,8 +36,8 @@ func newMockEngine() (*mocks.Engine, mockEngineFiddler) {
 			}
 		},
 	)
-	e.On("StopMonitor").Return()
-	e.On("DeinitMonitor").Return(func() bool {
+	e.On("Stop").Return()
+	e.On("Deinit").Return(func() bool {
 		return eInitOk
 	})
 	return e, setOks
@@ -122,10 +122,10 @@ func TestMonitorStartStop(t *testing.T) {
 				} else {
 					assert.NoError(t, err)
 				}
-				e.AssertNumberOfCalls(t, "InitMonitor", act.initCount)
-				e.AssertNumberOfCalls(t, "StartMonitor", act.startCount)
-				e.AssertNumberOfCalls(t, "StopMonitor", act.stopCount)
-				e.AssertNumberOfCalls(t, "DeinitMonitor", act.deinitCount)
+				e.AssertNumberOfCalls(t, "Init", act.initCount)
+				e.AssertNumberOfCalls(t, "Start", act.startCount)
+				e.AssertNumberOfCalls(t, "Stop", act.stopCount)
+				e.AssertNumberOfCalls(t, "Deinit", act.deinitCount)
 			}
 		})
 	}
@@ -168,7 +168,7 @@ func TestMonitorLog(t *testing.T) {
 // 		}()
 // 	}
 // 	wg.Wait()
-// 	e.AssertNumberOfCalls(t, "StartMonitor", 1)
+// 	e.AssertNumberOfCalls(t, "Start", 1)
 // }
 
 func TestMonitorDoneSignal(t *testing.T) {

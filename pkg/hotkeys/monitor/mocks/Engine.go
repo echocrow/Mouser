@@ -12,8 +12,8 @@ type Engine struct {
 	mock.Mock
 }
 
-// DeinitMonitor provides a mock function with given fields:
-func (_m *Engine) DeinitMonitor() bool {
+// Deinit provides a mock function with given fields:
+func (_m *Engine) Deinit() bool {
 	ret := _m.Called()
 
 	var r0 bool
@@ -26,8 +26,8 @@ func (_m *Engine) DeinitMonitor() bool {
 	return r0
 }
 
-// InitMonitor provides a mock function with given fields:
-func (_m *Engine) InitMonitor() bool {
+// Init provides a mock function with given fields:
+func (_m *Engine) Init() bool {
 	ret := _m.Called()
 
 	var r0 bool
@@ -40,8 +40,8 @@ func (_m *Engine) InitMonitor() bool {
 	return r0
 }
 
-// StartMonitor provides a mock function with given fields: m
-func (_m *Engine) StartMonitor(m *monitor.Monitor) error {
+// Start provides a mock function with given fields: m
+func (_m *Engine) Start(m *monitor.Monitor) error {
 	ret := _m.Called(m)
 
 	var r0 error
@@ -54,7 +54,7 @@ func (_m *Engine) StartMonitor(m *monitor.Monitor) error {
 	return r0
 }
 
-// StopMonitor provides a mock function with given fields:
-func (_m *Engine) StopMonitor() {
+// Stop provides a mock function with given fields:
+func (_m *Engine) Stop() {
 	_m.Called()
 }

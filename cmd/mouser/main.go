@@ -1,5 +1,107 @@
 package main
 
+import (
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+
+	"github.com/birdkid/mouser/pkg/bootstrap"
+	"github.com/birdkid/mouser/pkg/config"
+)
+
+// version is the version of this app set at build-time.
+var version = "0.0.0-dev"
+
 func main() {
-	// @todo
+	var confPath string
+	defaultConfPath, _ := defaultConfigPath()
+	flag.StringVar(&confPath, "config", "", fmt.Sprintf(
+		"The path to the config file. Defaults to %s.",
+		defaultConfPath,
+	))
+
+	var getVersion bool
+	flag.BoolVar(&getVersion, "version", false, "Print the app version & exit.")
+
+	flag.Parse()
+
+	if getVersion {
+		exitMessage(0, fmt.Sprint("mouser ", version))
+	}
+
+	conf, err := parseConfig(confPath)
+	if err != nil {
+		abort(2, err)
+	}
+
+	run, stop, err := bootstrap.Bootstrap(conf)
+	if err != nil {
+		abort(1, err)
+	}
+
+	sigCh := make(chan os.Signal, 2)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		err := stop()
+		if err != nil {
+			abort(1, err)
+		}
+	}()
+
+	run()
+}
+
+func defaultConfigPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	confPath := filepath.Join(homeDir, ".config", "mouser", "config.yml")
+	return confPath, nil
+}
+
+func abort(code int, err error) {
+	exitMessage(code, fmt.Sprint("[Error] ", err))
+}
+
+func exitMessage(code int, msg string) {
+	flag.CommandLine.SetOutput(nil)
+	fmt.Fprintln(flag.CommandLine.Output(), msg)
+	os.Exit(code)
+}
+
+func parseConfig(confPath string) (config.Config, error) {
+	var err error
+
+	if confPath == "" {
+		if confPath, err = defaultConfigPath(); err != nil {
+			return config.Config{}, fmt.Errorf("error getting default config path: %s", err)
+		}
+	}
+
+	if confPath == "" {
+		return config.Config{}, fmt.Errorf("config path is required")
+	}
+
+	confPath, err = filepath.Abs(confPath)
+	if err != nil {
+		return config.Config{}, fmt.Errorf("error parsing config path: %s", err)
+	}
+
+	confFile, err := ioutil.ReadFile(confPath)
+	if err != nil {
+		return config.Config{}, fmt.Errorf("error reading config file: %s", err)
+	}
+
+	conf, err := config.ParseYAML(confFile)
+	if err != nil {
+		return config.Config{}, fmt.Errorf("error parseing config file: %s", err)
+	}
+
+	return conf, nil
 }

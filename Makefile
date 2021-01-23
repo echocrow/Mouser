@@ -7,6 +7,13 @@ VERSION := ${HASH} (${COMMIT_DATE})
 run:
 	@go run -race ./cmd/mouser
 
+.PHONY: mock
+mock:
+	# Deleting old mocks...
+	@find . -name mocks -type d -print0|xargs -0 rm -r --
+	# Generating new mocks...
+	@go generate ./...
+
 .PHONY: test
 test:
 	@go test -race ./...

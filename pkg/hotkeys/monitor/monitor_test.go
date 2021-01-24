@@ -113,7 +113,7 @@ func TestMonitorStartStop(t *testing.T) {
 				setEngineOks(act.eInitOk, act.eRunOk)
 				var err error
 				if !act.stop {
-					_, _, err = m.Start()
+					_, err = m.Start()
 				} else {
 					err = m.Stop()
 				}
@@ -171,19 +171,6 @@ func TestMonitorLog(t *testing.T) {
 // 	e.AssertNumberOfCalls(t, "Start", 1)
 // }
 
-func TestMonitorDoneSignal(t *testing.T) {
-	t.Parallel()
-	timeout := time.Second
-	assertCompletesInTime(t, func() {
-		m := newMockMonitor(nil)
-		_, doneCh, err := m.Start()
-		if assert.NoError(t, err) {
-			go m.Stop()
-			<-doneCh
-		}
-	}, timeout, "start/stop too slow")
-}
-
 func TestMonitorEvents(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -211,7 +198,7 @@ func TestMonitorEvents(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			m := newMockMonitor(nil)
-			eventsCh, _, err := m.Start()
+			eventsCh, err := m.Start()
 			if assert.NoError(t, err) {
 				gotEvents := []monitor.HotkeyEvent{}
 				var wg sync.WaitGroup

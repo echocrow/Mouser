@@ -35,7 +35,6 @@ type HotkeyEvent struct {
 type Monitor struct {
 	Hotkeys hotkey.Registrar
 	eventCh chan HotkeyEvent
-	doneCh  chan struct{}
 	engine  Engine
 	logCb   log.Callback
 	mu      sync.Mutex
@@ -60,34 +59,32 @@ func (m *Monitor) SetLogCb(logCb log.Callback) {
 // Start starts hotkey monitoring.
 func (m *Monitor) Start() (
 	hotkeyCh chan HotkeyEvent,
-	doneCh chan struct{},
 	err error,
 ) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.eventCh != nil {
-		return nil, nil, ErrAlreadyStarted
+		return nil, ErrAlreadyStarted
 	}
 
 	if ok := m.engine.Init(); !ok {
-		return nil, nil, ErrInitFailed
+		return nil, ErrInitFailed
 	}
 
 	err = m.engine.Start(m)
 	if err != nil {
 		defer m.engine.Deinit()
-		return nil, nil, err
+		return nil, err
 	}
 
-	m.doneCh = make(chan struct{})
 	m.eventCh = make(chan HotkeyEvent)
 
 	if m.logCb != nil {
 		m.logCb("Hotkey monitor started.")
 	}
 
-	return m.eventCh, m.doneCh, nil
+	return m.eventCh, nil
 }
 
 // Stop stops hotkey monitoring.
@@ -105,11 +102,6 @@ func (m *Monitor) Stop() error {
 		return ErrDeinitFailed
 	}
 
-	go func(doneCh chan struct{}) {
-		doneCh <- struct{}{}
-		close(doneCh)
-	}(m.doneCh)
-	m.doneCh = nil
 	close(m.eventCh)
 	m.eventCh = nil
 

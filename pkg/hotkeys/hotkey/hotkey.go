@@ -19,23 +19,6 @@ var (
 // ID holds the ID of a hotkey.
 type ID uint8
 
-// IDProvider describes a hotkey ID provider.
-type IDProvider interface {
-	nextID() ID
-}
-
-// Engine describes a hotkey registry engine.
-type Engine interface {
-	register(id ID, keyIndex KeyIndex) (ok bool)
-	unregister(id ID)
-}
-
-// Registrar describes a hotkey registrar.
-type Registrar interface {
-	Add(key KeyName) (ID, error)
-	Remove(id ID)
-}
-
 // Registry holds a hotkey registry.
 type Registry struct {
 	ipd    IDProvider
@@ -48,7 +31,7 @@ func NewRegistry(engine Engine, ipd IDProvider) Registry {
 		engine = CEngine{}
 	}
 	if ipd == nil {
-		ipd = newIDCounter()
+		ipd = NewIDCounter()
 	}
 	return Registry{
 		ipd:    ipd,
@@ -67,8 +50,8 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 		return 0, err
 	}
 
-	id := reg.ipd.nextID()
-	if ok := reg.engine.register(id, keyIndex); !ok {
+	id := reg.ipd.NextID()
+	if ok := reg.engine.Register(id, keyIndex); !ok {
 		return 0, ErrRegistrationFailed
 	}
 
@@ -77,32 +60,35 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 
 // Remove removes a hotkey to the reg registry.
 func (reg Registry) Remove(id ID) {
-	reg.engine.unregister(id)
+	reg.engine.Unregister(id)
 }
 
 // CEngine implements hotkey engine via C.
 type CEngine struct{}
 
-func (CEngine) register(id ID, keyIndex KeyIndex) (ok bool) {
+// Register registers a hotkey via CEngine.
+func (CEngine) Register(id ID, keyIndex KeyIndex) (ok bool) {
 	return bool(C.registerHotkey(C.MouserHotKeyID(id), C.MouserKeyIndex(keyIndex)))
 }
-func (CEngine) unregister(id ID) {
+
+// Unregister unregisters a hotkey via CEngine.
+func (CEngine) Unregister(id ID) {
 	C.unregisterHotkey(C.MouserHotKeyID(id))
 }
 
-// idCounter implements a simple incremental ID counter.
-type idCounter struct {
+// IDCounter implements a simple incremental ID counter.
+type IDCounter struct {
 	nid ID
 	mu  sync.Mutex
 }
 
-// newIDCounter creates a new ID counter starting at 1.
-func newIDCounter() *idCounter {
-	return &idCounter{nid: 1}
+// NewIDCounter creates a new ID counter starting at 1.
+func NewIDCounter() *IDCounter {
+	return &IDCounter{nid: 1}
 }
 
-// nextID gets the next ID and increments the current ID counter.
-func (idc *idCounter) nextID() ID {
+// NextID gets the next ID and increments the current ID counter.
+func (idc *IDCounter) NextID() ID {
 	idc.mu.Lock()
 	defer idc.mu.Unlock()
 	id := idc.nid

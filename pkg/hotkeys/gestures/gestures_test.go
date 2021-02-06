@@ -29,12 +29,14 @@ const (
 	shortPressTTL = 100
 	longPressT    = shortPressTTL + 1
 	gestureTTL    = 100
+	gesturesCap   = 4
 )
 
 func newConfig() gestures.Config {
 	return gestures.Config{
 		ShortPressTTL: time.Second * shortPressTTL,
 		GestureTTL:    time.Second * gestureTTL,
+		Cap:           gesturesCap,
 	}
 }
 
@@ -137,6 +139,27 @@ func TestFromHotkeys(t *testing.T) {
 				{1, 11, hk{}, nil},
 				{1, 17, hk{}, []gst{pShort}},
 				{1, 13, hk{}, nil},
+			},
+		},
+		{
+			"honors gesture cap",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort}},
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort, pShort}},
+				{1, 1, hk{true}, nil},
+				{longPressT, 1, hk{}, []gst{pShort, pShort, pLong}},
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort, pShort, pLong, pShort}},
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort, pLong, pShort, pShort}},
+				{1, 1, hk{true}, nil},
+				{longPressT, 1, hk{}, []gst{pLong, pShort, pShort, pLong}},
+				{1, 1, hk{true}, nil},
+				{longPressT, 1, hk{}, []gst{pShort, pShort, pLong, pLong}},
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort, pLong, pLong, pShort}},
 			},
 		},
 	}
@@ -308,6 +331,30 @@ func TestFromHotkeysSwipes(t *testing.T) {
 				{1, 9, swp{sdLeft}, nil},
 				{1, 7, hk{}, nil},
 				{1, 9, swp{sdRight}, nil},
+			},
+		},
+		{
+			"honors gesture cap",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, swp{sdLeft}, []gst{sLeft}},
+				{1, 1, swp{sdDown}, []gst{sLeft, sDown}},
+				{1, 1, swp{sdRight}, []gst{sLeft, sDown, sRight}},
+				{1, 1, swp{sdUp}, []gst{sLeft, sDown, sRight, sUp}},
+				{1, 1, swp{sdLeft}, []gst{sDown, sRight, sUp, sLeft}},
+				{1, 1, swp{sdDown}, []gst{sRight, sUp, sLeft, sDown}},
+				{1, 1, swp{sdRight}, []gst{sUp, sLeft, sDown, sRight}},
+				{1, 1, swp{sdUp}, []gst{sLeft, sDown, sRight, sUp}},
+				{1, 1, hk{}, nil},
+
+				{1, 2, hk{true}, nil},
+				{1, 2, swp{sdLeft}, []gst{sLeft}},
+				{1, 2, swp{sdLeft}, []gst{sLeft, sLeft}},
+				{1, 2, swp{sdRight}, []gst{sLeft, sLeft, sRight}},
+				{1, 2, swp{sdUp}, []gst{sLeft, sLeft, sRight, sUp}},
+				{1, 2, swp{sdRight}, []gst{sLeft, sRight, sUp, sRight}},
+				{1, 2, swp{sdDown}, []gst{sRight, sUp, sRight, sDown}},
+				{1, 2, hk{}, nil},
 			},
 		},
 	}

@@ -41,6 +41,7 @@ const (
 type Config struct {
 	ShortPressTTL time.Duration
 	GestureTTL    time.Duration
+	Cap           int
 }
 
 // Event represents a key/mouse gestures event.
@@ -54,6 +55,7 @@ type Event struct {
 const (
 	defaultShortPressTTL = time.Millisecond * 500
 	defaultGestureTTL    = time.Millisecond * 500
+	defaultGesturesCap   = int(8)
 )
 
 // FromHotkeys maps hotkey events to key & mouse gestures.
@@ -63,6 +65,7 @@ func FromHotkeys(
 	config := Config{
 		ShortPressTTL: defaultShortPressTTL,
 		GestureTTL:    defaultGestureTTL,
+		Cap:           defaultGesturesCap,
 	}
 	swpMon := swipes.NewDefaultMonitor()
 	return FromHotkeysCustom(hkEvs, config, swpMon)
@@ -134,9 +137,9 @@ func mapHkEvs(
 				}
 				if !swpd {
 					if dt <= config.ShortPressTTL {
-						gests = append(gests, PressShort)
+						gests = appendGest(gests, config.Cap, PressShort)
 					} else {
-						gests = append(gests, PressLong)
+						gests = appendGest(gests, config.Cap, PressLong)
 					}
 					ch <- Event{hkEv.HkID, gests, t}
 				}
@@ -145,11 +148,20 @@ func mapHkEvs(
 		case swpEv, ok := <-swpC:
 			if ok && hk != 0 {
 				swpd = true
-				gests = append(gests, swipeGesture(swpEv.Dir))
+				gests = appendGest(gests, config.Cap, swipeGesture(swpEv.Dir))
 				ch <- Event{hk, gests, swpEv.T}
 			}
 		}
 	}
+}
+
+func appendGest(gests []Gesture, gestsCap int, gest Gesture) []Gesture {
+	if gestsCap > 0 && len(gests)+1 > gestsCap {
+		d := len(gests) + 1 - gestsCap
+		gests = gests[d:]
+	}
+	gests = append(gests, gest)
+	return gests
 }
 
 func keyGesture(hkEv monitor.HotkeyEvent) Gesture {

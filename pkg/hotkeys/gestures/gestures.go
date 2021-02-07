@@ -87,6 +87,39 @@ func FromHotkeysCustom(
 	return ch
 }
 
+// Match checks whether gesture sequences a & b hold the same gestures.
+func Match(
+	a []Gesture,
+	b []Gesture,
+) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// MatchSingle checks whether gesture sequences holds only g.
+func MatchSingle(
+	a []Gesture,
+	g Gesture,
+) bool {
+	return len(a) == 1 && a[0] == g
+}
+
+// EndsIn checks whether gesture sequence a ends with gesture g.
+func EndsIn(
+	a []Gesture,
+	g Gesture,
+) bool {
+	l := len(a)
+	return l > 0 && a[l-1] == g
+}
+
 func mapHkEvs(
 	hkEvs <-chan monitor.HotkeyEvent,
 	swpMon swipes.Monitor,

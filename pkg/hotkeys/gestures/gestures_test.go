@@ -1,6 +1,7 @@
 package gestures_test
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -499,4 +500,99 @@ func sendEvs(
 	<-received
 
 	return got
+}
+
+func TestMatch(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		a    []gst
+		b    []gst
+		want bool
+	}{
+		{[]gst{}, []gst{}, true},
+		{[]gst{kDown}, []gst{}, false},
+		{[]gst{kDown}, []gst{kDown}, true},
+		{[]gst{pLong}, []gst{pShort}, false},
+		{[]gst{pShort, pLong}, []gst{pShort, pLong}, true},
+		{[]gst{pShort, pLong}, []gst{pLong, pShort}, false},
+		{[]gst{pShort, pLong, pLong}, []gst{pLong, pShort}, false},
+		{[]gst{pShort, pLong, pLong}, []gst{pShort, pLong, pShort}, false},
+		{[]gst{pShort, pLong, pLong}, []gst{pShort, pLong, pLong}, true},
+	}
+	for i, tc := range tests {
+		tc := tc
+		revs := [2]bool{false, true}
+		for _, rev := range revs {
+			rev := rev
+			tn := fmt.Sprint(i)
+			if rev {
+				tn = tn + " (rev)"
+			}
+			t.Run(tn, func(t *testing.T) {
+				t.Parallel()
+				a, b := tc.a, tc.b
+				if rev {
+					a, b = b, a
+				}
+				got := gestures.Match(a, b)
+				assert.Equal(t, tc.want, got)
+			})
+		}
+	}
+}
+
+func TestMatchSingle(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		a    []gst
+		g    gst
+		want bool
+	}{
+		{[]gst{}, "", false},
+		{[]gst{}, kDown, false},
+		{[]gst{kDown}, kDown, true},
+		{[]gst{kUp}, kUp, true},
+		{[]gst{pShort}, pShort, true},
+		{[]gst{kUp}, kDown, false},
+		{[]gst{kDown}, kUp, false},
+		{[]gst{kUp, kDown}, kDown, false},
+		{[]gst{kDown, kUp}, kDown, false},
+	}
+	for i, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			t.Parallel()
+			a, g := tc.a, tc.g
+			got := gestures.MatchSingle(a, g)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
+func TestEndsIn(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		a    []gst
+		g    gst
+		want bool
+	}{
+		{[]gst{}, kDown, false},
+		{[]gst{kDown}, kDown, true},
+		{[]gst{kUp}, kDown, false},
+		{[]gst{kUp, kDown}, kDown, true},
+		{[]gst{kDown, kUp}, kDown, false},
+		{[]gst{pShort, pShort, pLong}, pShort, false},
+		{[]gst{pShort, pShort, pShort}, pShort, true},
+		{[]gst{pLong, pLong, pLong, pShort}, pShort, true},
+		{[]gst{pShort, pShort, pShort, pLong}, pShort, false},
+	}
+	for i, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			t.Parallel()
+			a, g := tc.a, tc.g
+			got := gestures.EndsIn(a, g)
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }

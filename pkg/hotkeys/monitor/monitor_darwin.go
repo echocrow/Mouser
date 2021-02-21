@@ -44,6 +44,15 @@ type CEngine struct {
 
 // Init initializes the engine for monitoring.
 func (e *CEngine) Init() (ok bool) {
+	// Note:
+	// We use the older Carbon Event Manager instead of the newer, more
+	// robust Quartz Event Services for keyboard events. This is because
+	// currently, when iTerm2 is the foreground app, keyboard events are not being
+	// received via Quartz Event Services; it appears as though iTerm2 always
+	// fully consumes them. However, monitoring keyboard events as hotkeys via the
+	// Carbon Event Manager, we are able to capture and consume the key events
+	// before iTerm2 can.
+
 	evSpecDown := C.EventTypeSpec{C.kEventClassKeyboard, C.kEventHotKeyPressed}
 	if status := C.InstallEventHandler(
 		C.GetEventDispatcherTarget(),

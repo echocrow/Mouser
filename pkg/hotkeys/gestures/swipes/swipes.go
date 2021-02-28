@@ -3,6 +3,7 @@ package swipes
 
 import (
 	"math"
+	"sync"
 	"time"
 
 	"github.com/birdkid/mouser/pkg/vec"
@@ -36,7 +37,7 @@ type PointerEvent struct {
 // Monitor describes a swipes monitor.
 //go:generate mockery --name "Monitor"
 type Monitor interface {
-	Ch() <-chan Event
+	Init() <-chan Event
 	Restart()
 	Pause()
 	Stop()
@@ -53,11 +54,21 @@ const (
 	defaultThrottle time.Duration = time.Millisecond * 250
 )
 
+// Monitor states.
+type monitorState uint8
+
+const (
+	monitorOff monitorState = iota
+	monitorReady
+	monitorOn
+)
+
 // PointerEngine describes a swipes monitor engine.
 //go:generate mockery --name "PointerEngine"
 type PointerEngine interface {
 	GetPointerPos() vec.Vec2D
-	Start(evs chan<- PointerEvent)
+	Init(ptEvs chan<- PointerEvent)
+	Resume()
 	Pause()
 	Stop()
 }
@@ -67,10 +78,12 @@ type PointerMonitor struct {
 	MinDist float64
 	ThrotD  time.Duration
 	ch      chan Event
-	ptEvs   chan PointerEvent
-	pause   chan struct{}
-	isOn    bool
 	engine  PointerEngine
+	ptEvs   <-chan PointerEvent
+	reset   chan struct{}
+	stop    chan struct{}
+	state   monitorState
+	mx      sync.RWMutex
 }
 
 // NewPointerMonitor creates a new swipes pointer monitor.
@@ -78,54 +91,80 @@ func NewPointerMonitor(engine PointerEngine) *PointerMonitor {
 	if engine == nil {
 		engine = newRobotGoEngine()
 	}
-	ch := make(chan Event)
 	return &PointerMonitor{
 		MinDist: defaultMinDist,
 		ThrotD:  defaultThrottle,
-		ch:      ch,
-		ptEvs:   make(chan PointerEvent),
-		pause:   make(chan struct{}),
 		engine:  engine,
+		reset:   make(chan struct{}),
+		stop:    make(chan struct{}),
 	}
 }
 
-// Ch returns the swipe events channel.
-func (m *PointerMonitor) Ch() <-chan Event {
+// Init initializes the swipe monitor.
+func (m *PointerMonitor) Init() <-chan Event {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	if m.state != monitorOff {
+		return nil
+	}
+	m.ch = make(chan Event, 1)
+	ptEvs := make(chan PointerEvent)
+	m.ptEvs = ptEvs
+	m.engine.Init(ptEvs)
+	go m.watch()
+	m.state = monitorReady
 	return m.ch
 }
 
 // Restart starts swipe monitoring (after first pausing previous monitoring
 // when previously started).
 func (m *PointerMonitor) Restart() {
-	m.softPause()
-	m.isOn = true
-	go m.run()
-	m.engine.Start(m.ptEvs)
+	if m.state < monitorReady {
+		return
+	}
+
+	m.Pause()
+
+	m.reset <- struct{}{}
+	m.engine.Resume()
+
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.state = monitorOn
 }
 
 // Pause pauses swipe monitoring.
 func (m *PointerMonitor) Pause() {
-	m.softPause()
+	if m.state < monitorReady {
+		return
+	}
+
+	if m.state == monitorOn {
+		m.engine.Pause()
+	}
+
+	m.mx.Lock()
+	defer m.mx.Unlock()
+	m.state = monitorReady
 }
 
 // Stop stops swipe monitoring.
 func (m *PointerMonitor) Stop() {
-	m.softPause()
-	m.engine.Stop()
-	close(m.ptEvs)
-	close(m.ch)
-	close(m.pause)
-}
-
-func (m *PointerMonitor) softPause() {
-	if m.isOn {
-		m.pause <- struct{}{}
-		m.engine.Pause()
+	if m.state < monitorReady {
+		return
 	}
-	m.isOn = false
+
+	m.mx.Lock()
+	m.state = monitorOff
+	m.mx.Unlock()
+
+	m.engine.Stop()
+	close(m.stop)
+	close(m.reset)
+	close(m.ch)
 }
 
-func (m *PointerMonitor) run() {
+func (m *PointerMonitor) watch() {
 	origin := m.engine.GetPointerPos()
 	prEv := Event{}
 
@@ -142,11 +181,20 @@ func (m *PointerMonitor) run() {
 				if dir != prEv.Dir || ptEv.T.Sub(prEv.T) > m.ThrotD {
 					ev := Event{dir, ptEv.T}
 					prEv = ev
-					m.ch <- ev
+					m.mx.RLock()
+					if m.state == monitorOn {
+						m.ch <- ev
+					}
+					m.mx.RUnlock()
 				}
 				origin = p
 			}
-		case <-m.pause:
+		case _, ok := <-m.reset:
+			if !ok {
+				return
+			}
+			origin = m.engine.GetPointerPos()
+		case <-m.stop:
 			return
 		}
 	}
@@ -178,14 +226,15 @@ const (
 type robotGoEngine struct {
 	pollRate time.Duration
 	ticker   *time.Ticker
-	pause    chan struct{}
+	stop     chan struct{}
+	ptEvs    chan<- PointerEvent
 }
 
 func newRobotGoEngine() *robotGoEngine {
 	return &robotGoEngine{
 		pollRate: defaultPollRate,
 		ticker:   newStoppedTicker(),
-		pause:    make(chan struct{}),
+		stop:     make(chan struct{}),
 	}
 }
 
@@ -194,27 +243,33 @@ func (*robotGoEngine) GetPointerPos() vec.Vec2D {
 	return vec.Vec2D{X: float64(x), Y: float64(-y)}
 }
 
-func (e *robotGoEngine) Start(ch chan<- PointerEvent) {
-	go e.watch(ch)
+func (e *robotGoEngine) Init(ptEvs chan<- PointerEvent) {
+	e.ptEvs = ptEvs
+	go e.watch()
+}
+
+func (e *robotGoEngine) Resume() {
 	e.ticker.Reset(e.pollRate)
 }
 
 func (e *robotGoEngine) Pause() {
 	e.ticker.Stop()
-	e.pause <- struct{}{}
 }
 
 func (e *robotGoEngine) Stop() {
-	close(e.pause)
+	defer close(e.stop)
+	defer close(e.ptEvs)
+	e.stop <- struct{}{}
+	e.ptEvs = nil
 }
 
-func (e *robotGoEngine) watch(ch chan<- PointerEvent) {
+func (e *robotGoEngine) watch() {
 	for {
 		select {
 		case t := <-e.ticker.C:
 			pos := e.GetPointerPos()
-			ch <- PointerEvent{pos, t}
-		case <-e.pause:
+			e.ptEvs <- PointerEvent{pos, t}
+		case <-e.stop:
 			return
 		}
 	}

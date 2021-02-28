@@ -12,8 +12,8 @@ type Monitor struct {
 	mock.Mock
 }
 
-// Ch provides a mock function with given fields:
-func (_m *Monitor) Ch() <-chan swipes.Event {
+// Init provides a mock function with given fields:
+func (_m *Monitor) Init() <-chan swipes.Event {
 	ret := _m.Called()
 
 	var r0 <-chan swipes.Event

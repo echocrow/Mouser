@@ -137,7 +137,7 @@ func mapHkEvs(
 	)
 	if swpMon != nil {
 		defer swpMon.Stop()
-		swpC = swpMon.Ch()
+		swpC = swpMon.Init()
 	}
 	for {
 		select {

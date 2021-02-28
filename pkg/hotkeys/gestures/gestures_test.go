@@ -45,7 +45,7 @@ func newMockSwipesMonitor(
 	ch <-chan swipes.Event,
 ) *swpMocks.Monitor {
 	m := new(swpMocks.Monitor)
-	m.On("Ch").Return(ch)
+	m.On("Init").Return(ch)
 	m.On("Restart").Return()
 	m.On("Pause").Return()
 	m.On("Stop").Return()

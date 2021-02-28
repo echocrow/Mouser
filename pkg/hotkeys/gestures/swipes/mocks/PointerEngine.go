@@ -27,14 +27,19 @@ func (_m *PointerEngine) GetPointerPos() vec.Vec2D {
 	return r0
 }
 
+// Init provides a mock function with given fields: ptEvs
+func (_m *PointerEngine) Init(ptEvs chan<- swipes.PointerEvent) {
+	_m.Called(ptEvs)
+}
+
 // Pause provides a mock function with given fields:
 func (_m *PointerEngine) Pause() {
 	_m.Called()
 }
 
-// Start provides a mock function with given fields: evs
-func (_m *PointerEngine) Start(evs chan<- swipes.PointerEvent) {
-	_m.Called(evs)
+// Resume provides a mock function with given fields:
+func (_m *PointerEngine) Resume() {
+	_m.Called()
 }
 
 // Stop provides a mock function with given fields:

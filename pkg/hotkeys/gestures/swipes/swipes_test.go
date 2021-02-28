@@ -3,6 +3,7 @@ package swipes_test
 import (
 	"fmt"
 	"math"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,33 +28,65 @@ func newMockPointerEngine(
 	staticPos vec.Vec2D,
 	evs <-chan swipes.PointerEvent,
 	sent chan<- struct{},
+	done chan<- struct{},
 ) *mocks.PointerEngine {
 	e := new(mocks.PointerEngine)
-	e.On("GetPointerPos").Return(staticPos)
-	pause := make(chan struct{})
-	e.On("Start", mock.AnythingOfType("chan<- swipes.PointerEvent")).Run(
-		func(args mock.Arguments) {
-			go func() {
-				ch := args.Get(0).(chan<- swipes.PointerEvent)
-				for {
-					select {
-					case ev := <-evs:
-						ch <- ev
-						if sent != nil {
-							sent <- struct{}{}
-						}
-					case <-pause:
-						return
-					}
+
+	sig := make(chan bool)
+	stop := make(chan struct{})
+
+	isRunning := false
+	run := func(ch chan<- swipes.PointerEvent) {
+		isOn := false
+		defer func() {
+			defer close(ch)
+			defer close(done)
+			isRunning = false
+			done <- struct{}{}
+		}()
+		for {
+			select {
+			case newIsOn, ok := <-sig:
+				if !ok {
+					return
 				}
-			}()
+				isOn = newIsOn
+			case ev, ok := <-evs:
+				if !ok {
+					return
+				}
+				if isOn {
+					ch <- ev
+				}
+				sent <- struct{}{}
+			case <-stop:
+				return
+			}
+		}
+	}
+
+	e.On("GetPointerPos").Return(staticPos)
+	e.On("Init", mock.AnythingOfType("chan<- swipes.PointerEvent")).Run(
+		func(args mock.Arguments) {
+			ch := args.Get(0).(chan<- swipes.PointerEvent)
+			go run(ch)
+			isRunning = true
 		},
 	)
+	e.On("Resume").Run(func(args mock.Arguments) {
+		if isRunning {
+			sig <- true
+		}
+	})
 	e.On("Pause").Run(func(args mock.Arguments) {
-		pause <- struct{}{}
+		if isRunning {
+			sig <- false
+		}
 	})
 	e.On("Stop").Run(func(args mock.Arguments) {
-		close(pause)
+		if isRunning {
+			close(stop)
+		}
 	})
 	return e
 }
@@ -126,24 +159,44 @@ func TestRotateDir(t *testing.T) {
 
 func TestPointerMonitorStartStop(t *testing.T) {
 	t.Parallel()
+	withInitTests := [2]bool{true, false}
 	for repeats := 0; repeats <= 10; repeats++ {
 		repeats := repeats
-		tn := fmt.Sprintf("gracefully restarts & pauses (x%d)", repeats)
-		t.Run(tn, func(t *testing.T) {
-			t.Parallel()
-
-			e := newMockPointerEngine(vec.Vec2D{}, nil, nil)
-			m := newMockPointerMonitor(e)
-			for i := 0; i < repeats; i++ {
-				m.Restart()
-				m.Pause()
+		for _, withInit := range withInitTests {
+			withInit := withInit
+			tn := fmt.Sprintf("gracefully restarts & pauses (x%d)", repeats)
+			if !withInit {
+				tn += " (without init)"
 			}
-			m.Stop()
+			t.Run(tn, func(t *testing.T) {
+				t.Parallel()
 
-			e.AssertNumberOfCalls(t, "Start", repeats)
-			e.AssertNumberOfCalls(t, "Pause", repeats)
-			e.AssertNumberOfCalls(t, "Stop", 1)
-		})
+				e := newMockPointerEngine(vec.Vec2D{}, nil, nil, nil)
+				m := newMockPointerMonitor(e)
+				if withInit {
+					m.Init()
+				}
+
+				for i := 0; i < repeats; i++ {
+					m.Restart()
+					m.Pause()
+					m.Pause()
+				}
+				m.Stop()
+				m.Stop()
+				m.Stop()
+
+				wantCallNums := 0
+				wantStopCallNums := 0
+				if withInit {
+					wantCallNums = repeats
+					wantStopCallNums = 1
+				}
+				e.AssertNumberOfCalls(t, "Resume", wantCallNums)
+				e.AssertNumberOfCalls(t, "Pause", wantCallNums)
+				e.AssertNumberOfCalls(t, "Stop", wantStopCallNums)
+			})
+		}
 	}
 }
 
@@ -295,24 +348,35 @@ func TestPointerMonitorCh(t *testing.T) {
 
 				sent := make(chan struct{})
 				defer close(sent)
+				engineDone := make(chan struct{})
 
-				e := newMockPointerEngine(tc.origin, evsCh, sent)
+				e := newMockPointerEngine(tc.origin, evsCh, sent, engineDone)
 				m := newMockPointerMonitor(e)
 				m.MinDist = minDist
 				m.ThrotD = time.Duration(throtD) * time.Second
 
 				ptrEvs, wantSwpEvs, swpsL := newPtSwpEvs(tc.ptSwpEvs, rot)
 				got := make([]swipes.Event, 0, swpsL)
+				var gotMx sync.RWMutex
+
+				ch := m.Init()
 
 				m.Restart()
 
-				done := make(chan struct{})
-				defer close(done)
+				doneRead := make(chan struct{})
+				maxRead := make(chan struct{})
 				go func() {
-					for ev := range m.Ch() {
+					defer close(doneRead)
+					defer close(maxRead)
+					for ev := range ch {
+						gotMx.Lock()
 						got = append(got, ev)
+						gotMx.Unlock()
+						if len(got) == len(wantSwpEvs) {
+							maxRead <- struct{}{}
+						}
 					}
-					done <- struct{}{}
+					doneRead <- struct{}{}
 				}()
 
 				for _, ev := range ptrEvs {
@@ -320,22 +384,38 @@ func TestPointerMonitorCh(t *testing.T) {
 					<-sent
 				}
 
-				m.Stop()
-				<-done
-
-				assert.Equal(t, wantSwpEvs, got)
-				extra := []swipes.Event{}
-				select {
-				case ev, ok := <-m.Ch():
-					if ok {
-						extra = append(extra, ev)
-					}
-				default:
+				if len(wantSwpEvs) > 0 {
+					<-maxRead
 				}
-				assert.Equal(t, []swipes.Event{}, extra, "keeps no extra events")
+
+				gotMx.RLock()
+				assert.Equal(t, wantSwpEvs, got)
+				gotMx.RUnlock()
+				extras := []swipes.Event{}
+				extras = readSwipeEvents(extras, ch)
+
+				m.Stop()
+				<-doneRead
+
+				extras = readSwipeEvents(extras, ch)
+				assert.Equal(t, []swipes.Event{}, extras, "keeps no extra events")
 			})
 		}
 	}
+}
+
+func readSwipeEvents(
+	evs []swipes.Event,
+	ch <-chan swipes.Event,
+) []swipes.Event {
+	select {
+	case ev, ok := <-ch:
+		if ok {
+			evs = append(evs, ev)
+		}
+	default:
+	}
+	return evs
 }
 
 type ptSwpEv struct {

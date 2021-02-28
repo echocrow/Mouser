@@ -116,7 +116,7 @@ func TestRotateDir(t *testing.T) {
 				rad := tc.rad + (math.Pi * 2 * f)
 				got := tc.dir
 				for _, want := range tc.wants {
-					got = swipes.RotateDir(got, rad)
+					got = rotateDir(got, rad)
 					assert.Equal(t, want, got)
 				}
 			})
@@ -378,11 +378,24 @@ func newPtSwpEvs(rawEvs []ptSwpEv, rot uint) (
 
 		if rawEv.swpD != sNil {
 			swpEvs[swpI] = swipes.Event{
-				Dir: swipes.RotateDir(rawEv.swpD, rad),
+				Dir: rotateDir(rawEv.swpD, rad),
 				T:   t,
 			}
 			swpI++
 		}
 	}
 	return
+}
+
+// rotateDir changes swipe direction dir by radian rad.
+func rotateDir(dir sDir, rad float64) sDir {
+	if dir == sNil {
+		return sNil
+	}
+	b := sDir(1)
+	c := float64(4)
+	d := float64(dir - b)
+	d = d + rad/(math.Pi*2/c)
+	d = math.Mod((math.Mod(d, c) + c), c)
+	return sDir(d) + b
 }

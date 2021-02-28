@@ -33,19 +33,6 @@ type PointerEvent struct {
 	T   time.Time
 }
 
-// RotateDir changes swipe direction dir by radian rad.
-func RotateDir(dir Dir, rad float64) Dir {
-	if dir == NoSwipe {
-		return NoSwipe
-	}
-	b := Dir(1)
-	c := float64(4)
-	d := float64(dir - b)
-	d = d + rad/(math.Pi*2/c)
-	d = math.Mod((math.Mod(d, c) + c), c)
-	return Dir(d) + b
-}
-
 // Monitor describes a swipes monitor.
 //go:generate mockery --name "Monitor"
 type Monitor interface {

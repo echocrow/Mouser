@@ -152,6 +152,7 @@ func TestPointerMonitorCh(t *testing.T) {
 
 	const (
 		minDist = float64(12)
+		throtD  = uint(12)
 	)
 	minDistPyth2b := math.Sqrt(minDist * minDist / 5)
 
@@ -206,18 +207,77 @@ func TestPointerMonitorCh(t *testing.T) {
 			},
 		},
 		{
+			"throttles duplicates",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{1, minDist, 0, sRight},
+				{throtD / 3, minDist, 0, sNil},
+				{throtD / 3, minDist, 0, sNil},
+				{throtD / 3, minDist, 0, sNil},
+				{throtD / 3, minDist, 0, sRight},
+			},
+		},
+		{
+			"does not throttle after direction change",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{throtD / 4, +minDist, 0, sRight},
+				{throtD / 4, -minDist, 0, sLeft},
+				{throtD / 4, +minDist, 0, sRight},
+				{throtD / 4, -minDist, 0, sLeft},
+				{throtD / 4, +minDist, 0, sRight},
+				{throtD / 4, -minDist, 0, sLeft},
+			},
+		},
+		{
+			"detects slow swipes",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{throtD * 10, minDist, 0, sRight},
+				{throtD * 10, 0, minDist, sUp},
+				{throtD * 10, -minDist, 0, sLeft},
+				{throtD * 10, 0, -minDist, sDown},
+
+				{throtD * 10, minDist, 0, sRight},
+				{throtD * 10, minDist, 0, sRight},
+				{throtD * 10, minDist, 0, sRight},
+				{throtD * 10, minDist, 0, sRight},
+			},
+		},
+		{
+			"builds swipes and resets",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{throtD, 0, minDist / 3, sNil},
+				{throtD, 0, minDist / 3, sNil},
+				{throtD, 0, minDist / 3, sUp},
+				{throtD, 0, minDist / 3, sNil},
+				{throtD, 0, minDist / 3, sNil},
+				{throtD, 0, minDist / 3, sUp},
+			},
+		},
+		{
+			"discards throttled swipe direction",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{0, minDist, 0, sRight},
+				{throtD / 4, minDist * 10, 0, sNil},
+				{throtD / 4, 0, minDist, sUp},
+			},
+		},
+		{
 			"detects progressive diagonal swipes",
 			vec.Vec2D{},
 			[]ptSwpEv{
-				{1, 0, minDist * 1 / 2, sNil},
+				{throtD, 0, minDist * 1 / 2, sNil},
 				{1, minDist * 2 / 3, 0, sNil},
 				{1, 0, minDist * 1 / 2, sUp},
 
-				{1, minDistPyth2b, 0, sNil},
+				{throtD, minDistPyth2b, 0, sNil},
 				{1, minDistPyth2b, 0, sNil},
 				{1, 0, minDistPyth2b, sRight},
 
-				{1, 0, minDistPyth2b, sNil},
+				{throtD, 0, minDistPyth2b, sNil},
 				{1, minDistPyth2b, 0, sNil},
 				{1, minDistPyth2b, 0, sRight},
 			},
@@ -239,6 +299,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				e := newMockPointerEngine(tc.origin, evsCh, sent)
 				m := newMockPointerMonitor(e)
 				m.MinDist = minDist
+				m.ThrotD = time.Duration(throtD) * time.Second
 
 				ptrEvs, wantSwpEvs, swpsL := newPtSwpEvs(tc.ptSwpEvs, rot)
 				got := make([]swipes.Event, 0, swpsL)

@@ -62,7 +62,8 @@ func NewDefaultMonitor() Monitor {
 
 // Default pointer monitor settings.
 const (
-	defaultMinDist float64 = 30
+	defaultMinDist  float64       = 30
+	defaultThrottle time.Duration = time.Millisecond * 250
 )
 
 // PointerEngine describes a swipes monitor engine.
@@ -77,6 +78,7 @@ type PointerEngine interface {
 // PointerMonitor detects and shares swipes.
 type PointerMonitor struct {
 	MinDist float64
+	ThrotD  time.Duration
 	ch      chan Event
 	ptEvs   chan PointerEvent
 	pause   chan struct{}
@@ -92,6 +94,7 @@ func NewPointerMonitor(engine PointerEngine) *PointerMonitor {
 	ch := make(chan Event)
 	return &PointerMonitor{
 		MinDist: defaultMinDist,
+		ThrotD:  defaultThrottle,
 		ch:      ch,
 		ptEvs:   make(chan PointerEvent),
 		pause:   make(chan struct{}),
@@ -137,6 +140,7 @@ func (m *PointerMonitor) softPause() {
 
 func (m *PointerMonitor) run() {
 	origin := m.engine.GetPointerPos()
+	prEv := Event{}
 
 	for {
 		select {
@@ -148,7 +152,11 @@ func (m *PointerMonitor) run() {
 			dp := p.Sub(origin)
 			dir := dirFromVec2(dp, m.MinDist)
 			if dir != NoSwipe {
-				m.ch <- Event{dir, ptEv.T}
+				if dir != prEv.Dir || ptEv.T.Sub(prEv.T) > m.ThrotD {
+					ev := Event{dir, ptEv.T}
+					prEv = ev
+					m.ch <- ev
+				}
 				origin = p
 			}
 		case <-m.pause:

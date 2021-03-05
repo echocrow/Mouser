@@ -22,6 +22,13 @@ const (
 	SwipeDown
 )
 
+// Config defines swipes settings.
+type Config struct {
+	MinDist  float64
+	Throttle time.Duration
+	PollRate time.Duration
+}
+
 // Event represents a swipe direction at a given time.
 type Event struct {
 	Dir Dir
@@ -43,16 +50,31 @@ type Monitor interface {
 	Stop()
 }
 
-// NewDefaultMonitor creates a new default swipes monitor.
-func NewDefaultMonitor() Monitor {
-	return NewPointerMonitor(nil)
-}
-
 // Default pointer monitor settings.
 const (
 	defaultMinDist  float64       = 30
 	defaultThrottle time.Duration = time.Millisecond * 250
 )
+
+// Default robotGoEngine settings.
+const (
+	defaultPollRate time.Duration = time.Millisecond * 100
+)
+
+// NewDefaultMonitor creates a new default swipes monitor.
+func NewDefaultMonitor() Monitor {
+	config := Config{
+		MinDist:  defaultMinDist,
+		Throttle: defaultThrottle,
+		PollRate: defaultPollRate,
+	}
+	return NewCustomMonitor(config)
+}
+
+// NewCustomMonitor creates a new default swipes monitor with custom config.
+func NewCustomMonitor(config Config) Monitor {
+	return NewPointerMonitor(config, nil)
+}
 
 // Monitor states.
 type monitorState uint8
@@ -75,28 +97,26 @@ type PointerEngine interface {
 
 // PointerMonitor detects and shares swipes.
 type PointerMonitor struct {
-	MinDist float64
-	ThrotD  time.Duration
-	ch      chan Event
-	engine  PointerEngine
-	ptEvs   <-chan PointerEvent
-	reset   chan struct{}
-	stop    chan struct{}
-	state   monitorState
-	mx      sync.RWMutex
+	cfg    Config
+	ch     chan Event
+	engine PointerEngine
+	ptEvs  <-chan PointerEvent
+	reset  chan struct{}
+	stop   chan struct{}
+	state  monitorState
+	mx     sync.RWMutex
 }
 
 // NewPointerMonitor creates a new swipes pointer monitor.
-func NewPointerMonitor(engine PointerEngine) *PointerMonitor {
+func NewPointerMonitor(config Config, engine PointerEngine) *PointerMonitor {
 	if engine == nil {
-		engine = newRobotGoEngine()
+		engine = newRobotGoEngine(config)
 	}
 	return &PointerMonitor{
-		MinDist: defaultMinDist,
-		ThrotD:  defaultThrottle,
-		engine:  engine,
-		reset:   make(chan struct{}),
-		stop:    make(chan struct{}),
+		cfg:    config,
+		engine: engine,
+		reset:  make(chan struct{}),
+		stop:   make(chan struct{}),
 	}
 }
 
@@ -176,9 +196,9 @@ func (m *PointerMonitor) watch() {
 			}
 			p := ptEv.Pos
 			dp := p.Sub(origin)
-			dir := dirFromVec2(dp, m.MinDist)
+			dir := dirFromVec2(dp, m.cfg.MinDist)
 			if dir != NoSwipe {
-				if dir != prEv.Dir || ptEv.T.Sub(prEv.T) > m.ThrotD {
+				if dir != prEv.Dir || ptEv.T.Sub(prEv.T) > m.cfg.Throttle {
 					ev := Event{dir, ptEv.T}
 					prEv = ev
 					m.mx.RLock()
@@ -218,11 +238,6 @@ func dirFromVec2(v vec.Vec2D, minDist float64) Dir {
 	return SwipeLeft
 }
 
-// Default robotGoEngine settings.
-const (
-	defaultPollRate time.Duration = time.Millisecond * 100
-)
-
 type robotGoEngine struct {
 	pollRate time.Duration
 	ticker   *time.Ticker
@@ -230,9 +245,9 @@ type robotGoEngine struct {
 	ptEvs    chan<- PointerEvent
 }
 
-func newRobotGoEngine() *robotGoEngine {
+func newRobotGoEngine(config Config) *robotGoEngine {
 	return &robotGoEngine{
-		pollRate: defaultPollRate,
+		pollRate: config.PollRate,
 		ticker:   newStoppedTicker(),
 		stop:     make(chan struct{}),
 	}

@@ -91,8 +91,11 @@ func newMockPointerEngine(
 	return e
 }
 
-func newMockPointerMonitor(e swipes.PointerEngine) *swipes.PointerMonitor {
-	return swipes.NewPointerMonitor(e)
+func newMockPointerMonitor(
+	config swipes.Config,
+	e swipes.PointerEngine,
+) *swipes.PointerMonitor {
+	return swipes.NewPointerMonitor(config, e)
 }
 
 func TestRotateDir(t *testing.T) {
@@ -172,7 +175,7 @@ func TestPointerMonitorStartStop(t *testing.T) {
 				t.Parallel()
 
 				e := newMockPointerEngine(vec.Vec2D{}, nil, nil, nil)
-				m := newMockPointerMonitor(e)
+				m := newMockPointerMonitor(swipes.Config{}, e)
 				if withInit {
 					m.Init()
 				}
@@ -350,10 +353,12 @@ func TestPointerMonitorCh(t *testing.T) {
 				defer close(sent)
 				engineDone := make(chan struct{})
 
+				config := swipes.Config{
+					MinDist:  minDist,
+					Throttle: time.Duration(throtD) * time.Second,
+				}
 				e := newMockPointerEngine(tc.origin, evsCh, sent, engineDone)
-				m := newMockPointerMonitor(e)
-				m.MinDist = minDist
-				m.ThrotD = time.Duration(throtD) * time.Second
+				m := newMockPointerMonitor(config, e)
 
 				ptrEvs, wantSwpEvs, swpsL := newPtSwpEvs(tc.ptSwpEvs, rot)
 				got := make([]swipes.Event, 0, swpsL)

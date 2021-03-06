@@ -15,6 +15,9 @@ var (
 // ID holds the ID of a hotkey.
 type ID uint8
 
+// NoID is the empty ID value.
+const NoID ID = 0
+
 // IDProvider describes a hotkey ID provider.
 //go:generate mockery --name "IDProvider"
 type IDProvider interface {
@@ -24,7 +27,7 @@ type IDProvider interface {
 // Engine describes a hotkey registry engine.
 //go:generate mockery --name "Engine"
 type Engine interface {
-	Register(id ID, keyCode KeyCode) (ok bool)
+	Register(id ID, key KeyName) error
 	Unregister(id ID)
 }
 
@@ -60,17 +63,10 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 	if reg.ipd == nil {
 		return 0, ErrIncompleteRegistry
 	}
-
-	keyCode, err := NameToCode(key)
-	if err != nil {
+	id := reg.ipd.NextID()
+	if err := reg.engine.Register(id, key); err != nil {
 		return 0, err
 	}
-
-	id := reg.ipd.NextID()
-	if ok := reg.engine.Register(id, keyCode); !ok {
-		return 0, ErrRegistrationFailed
-	}
-
 	return id, nil
 }
 

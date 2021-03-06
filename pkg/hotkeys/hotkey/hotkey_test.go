@@ -21,7 +21,14 @@ func newMockIDProvider(staticID hkID) hotkey.IDProvider {
 
 func newMockEngine(t *testing.T, engineOk bool) hotkey.Engine {
 	e := new(mocks.Engine)
-	e.On("Register", mock.Anything, mock.Anything).Return(engineOk)
+	e.On("Register", mock.Anything, mock.Anything).Return(
+		func(id hkID, key hotkey.KeyName) error {
+			if !engineOk {
+				return hotkey.ErrRegistrationFailed
+			}
+			return nil
+		},
+	)
 	e.On("Unregister").Return()
 	return e
 }
@@ -43,27 +50,25 @@ func TestRegistry(t *testing.T) {
 		staticID := hkID(1)
 		idp := newMockIDProvider(staticID)
 		tests := []struct {
-			keyName hotkey.KeyName
-			wantID  hkID
-			wantErr bool
+			keyName  hotkey.KeyName
+			engineOk bool
+			wantOK   bool
+			wantID   hkID
 		}{
-			{"", 0, true},
-			{"f1", staticID, false},
-			{"f1", staticID, false},
-			{"invalidkeyname", 0, true},
-			{"f1", staticID, false},
+			{"somekey", true, true, staticID},
+			{"invalidkeyname", false, false, hotkey.NoID},
 		}
-		r := hotkey.NewRegistry(newMockEngine(t, true), idp)
 		for _, tc := range tests {
 			tc := tc
 			t.Run(fmt.Sprint(tc.keyName), func(t *testing.T) {
 				t.Parallel()
+				r := hotkey.NewRegistry(newMockEngine(t, tc.engineOk), idp)
 				gotID, err := r.Add(tc.keyName)
 				assert.Equal(t, tc.wantID, gotID)
-				if tc.wantErr {
-					assert.Error(t, err)
-				} else {
+				if tc.wantOK {
 					assert.NoError(t, err)
+				} else {
+					assert.Error(t, err)
 				}
 			})
 		}

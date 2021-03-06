@@ -23,8 +23,13 @@ type CEngine struct {
 }
 
 // Register registers a hotkey via CEngine.
-func (e *CEngine) Register(id ID, keyCode KeyCode) (ok bool) {
+func (e *CEngine) Register(id ID, key KeyName) error {
 	modifiers := uint32(0)
+
+	keyCode, err := NameToCode(key)
+	if err != nil {
+		return err
+	}
 
 	eventID := C.EventHotKeyID{
 		C.uint(MouserHotKeySig),
@@ -40,12 +45,12 @@ func (e *CEngine) Register(id ID, keyCode KeyCode) (ok bool) {
 		0,
 		&hotkeyRef,
 	); status != C.noErr {
-		return false
+		return ErrRegistrationFailed
 	}
 
 	e.refs[id] = hotkeyRef
 
-	return true
+	return nil
 }
 
 // Unregister unregisters a hotkey via CEngine.

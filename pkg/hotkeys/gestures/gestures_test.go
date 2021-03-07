@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/birdkid/mouser/pkg/hotkeys/gestures"
+	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
+	swpMocks "github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes/mocks"
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
 	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
 	"github.com/stretchr/testify/assert"
@@ -15,6 +17,10 @@ const (
 	kUp    = gestures.KeyUp
 	pShort = gestures.PressShort
 	pLong  = gestures.PressLong
+	sUp    = gestures.SwipeUp
+	sDown  = gestures.SwipeDown
+	sLeft  = gestures.SwipeLeft
+	sRight = gestures.SwipeRight
 )
 
 type gst = gestures.Gesture
@@ -31,6 +37,25 @@ func newConfig() gestures.Config {
 		GestureTTL:    time.Second * gestureTTL,
 	}
 }
+
+func newMockSwipesMonitor(
+	ch <-chan swipes.Event,
+) *swpMocks.Monitor {
+	m := new(swpMocks.Monitor)
+	m.On("Ch").Return(ch)
+	m.On("Restart").Return()
+	m.On("Pause").Return()
+	m.On("Stop").Return()
+	return m
+}
+
+const (
+	sdNil   = swipes.NoSwipe
+	sdRight = swipes.SwipeRight
+	sdUp    = swipes.SwipeUp
+	sdLeft  = swipes.SwipeLeft
+	sdDown  = swipes.SwipeDown
+)
 
 func TestFromHotkeys(t *testing.T) {
 	t.Parallel()
@@ -123,10 +148,185 @@ func TestFromHotkeys(t *testing.T) {
 			evs, want, gestEvsLen := newHkGestEvs(tc.hkGestEvs)
 
 			hkEvC := make(chan monitor.HotkeyEvent)
-			gestEvC := gestures.FromHotkeysCustom(hkEvC, config)
+			gestEvC := gestures.FromHotkeysCustom(hkEvC, config, nil)
 
 			got := make([]gestures.Event, 0, gestEvsLen)
-			got = sendEvs(evs, hkEvC, gestEvC, got)
+			got = sendEvs(evs, hkEvC, nil, gestEvC, got)
+
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
+func TestFromHotkeysSwipesMonitorStartStop(t *testing.T) {
+	t.Parallel()
+
+	config := newConfig()
+
+	tests := []struct {
+		name      string
+		hkGestEvs []hkGestEv
+		restarts  int
+		pauses    int
+		stops     int
+	}{
+		{
+			"does not start",
+			[]hkGestEv{},
+			0, 0, 1,
+		},
+		{
+			"starts with down-presses",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, nil},
+				{1, 2, hk{true}, nil},
+				{1, 2, hk{}, nil},
+				{1, 3, hk{true}, nil},
+				{1, 3, hk{}, nil},
+			},
+			3, 3, 1,
+		},
+		{
+			"restarts with conflicting down-presses",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, nil},
+				{1, 2, hk{true}, nil},
+				{1, 3, hk{true}, nil},
+				{1, 2, hk{}, nil},
+				{1, 3, hk{}, nil},
+			},
+			3, 2, 1,
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			evs, _, _ := newHkGestEvs(tc.hkGestEvs)
+
+			swpEvs := make(chan swipes.Event)
+			swpMon := newMockSwipesMonitor(swpEvs)
+			defer close(swpEvs)
+
+			hkEvC := make(chan monitor.HotkeyEvent)
+			gestEvC := gestures.FromHotkeysCustom(hkEvC, config, swpMon)
+
+			sendEvs(evs, hkEvC, nil, gestEvC, nil)
+
+			swpMon.AssertNumberOfCalls(t, "Restart", tc.restarts)
+			swpMon.AssertNumberOfCalls(t, "Pause", tc.pauses)
+			swpMon.AssertNumberOfCalls(t, "Stop", tc.stops)
+		})
+	}
+}
+
+func TestFromHotkeysSwipes(t *testing.T) {
+	t.Parallel()
+
+	config := newConfig()
+
+	tests := []struct {
+		name      string
+		hkGestEvs []hkGestEv
+	}{
+		{
+			"detects nothing",
+			[]hkGestEv{},
+		},
+		{
+			"discards void getures",
+			[]hkGestEv{
+				{1, 1, swp{sdLeft}, nil},
+				{1, 1, swp{sdRight}, nil},
+				{1, 1, hk{true}, nil},
+				{1, 1, hk{}, []gst{pShort}},
+				{1, 1, swp{sdUp}, nil},
+				{1, 1, swp{sdDown}, nil},
+			},
+		},
+		{
+			"detects simple swipes",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, swp{sdLeft}, []gst{sLeft}},
+				{1, 1, hk{}, nil},
+
+				{1, 2, hk{true}, nil},
+				{1, 2, swp{sdUp}, []gst{sUp}},
+				{1, 2, hk{}, nil},
+			},
+		},
+		{
+			"chains gestures",
+			[]hkGestEv{
+				{1, 1, hk{true}, nil},
+				{1, 1, swp{sdLeft}, []gst{sLeft}},
+				{1, 1, swp{sdRight}, []gst{sLeft, sRight}},
+				{1, 1, swp{sdUp}, []gst{sLeft, sRight, sUp}},
+				{1, 1, hk{}, nil},
+
+				{1, 2, hk{true}, nil},
+				{1, 2, hk{}, []gst{pShort}},
+				{1, 2, hk{true}, nil},
+				{1, 2, swp{sdDown}, []gst{pShort, sDown}},
+				{1, 2, swp{sdRight}, []gst{pShort, sDown, sRight}},
+				{1, 2, hk{}, nil},
+				{1, 2, hk{true}, nil},
+				{longPressT, 2, hk{}, []gst{pShort, sDown, sRight, pLong}},
+
+				{1, 3, hk{true}, nil},
+				{1, 3, swp{sdUp}, []gst{sUp}},
+				{1, 3, swp{sdRight}, []gst{sUp, sRight}},
+				{1, 3, hk{}, nil},
+				{1, 3, hk{true}, nil},
+				{1, 3, hk{}, []gst{sUp, sRight, pShort}},
+				{1, 3, hk{true}, nil},
+				{1, 3, swp{sdDown}, []gst{sUp, sRight, pShort, sDown}},
+				{1, 3, hk{}, nil},
+
+				{1, 4, hk{true}, nil},
+				{1, 4, swp{sdLeft}, []gst{sLeft}},
+				{1, 4, swp{sdLeft}, []gst{sLeft, sLeft}},
+				{1, 4, swp{sdLeft}, []gst{sLeft, sLeft, sLeft}},
+				{1, 4, swp{sdLeft}, []gst{sLeft, sLeft, sLeft, sLeft}},
+				{1, 4, hk{}, nil},
+			},
+		},
+		{
+			"discards prior hotkeys on multi-press",
+			[]hkGestEv{
+				{1, 5, hk{true}, nil},
+				{1, 7, hk{true}, nil},
+				{1, 9, hk{true}, nil},
+				{1, 9, swp{sdDown}, []gst{sDown}},
+				{1, 5, hk{}, nil},
+				{1, 9, swp{sdUp}, []gst{sDown, sUp}},
+				{1, 9, hk{}, nil},
+				{1, 9, swp{sdLeft}, nil},
+				{1, 7, hk{}, nil},
+				{1, 9, swp{sdRight}, nil},
+			},
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			evs, want, gestEvsLen := newHkGestEvs(tc.hkGestEvs)
+
+			swpEvs := make(chan swipes.Event)
+			swpMon := newMockSwipesMonitor(swpEvs)
+			defer close(swpEvs)
+
+			hkEvC := make(chan monitor.HotkeyEvent)
+			gestEvC := gestures.FromHotkeysCustom(hkEvC, config, swpMon)
+
+			got := make([]gestures.Event, 0, gestEvsLen)
+			got = sendEvs(evs, hkEvC, swpEvs, gestEvC, got)
 
 			assert.Equal(t, want, got)
 		})
@@ -135,6 +335,10 @@ func TestFromHotkeys(t *testing.T) {
 
 type hk struct {
 	isOn bool
+}
+
+type swp struct {
+	dir swipes.Dir
 }
 
 type hkGestEv struct {
@@ -178,6 +382,11 @@ func newHkGestEvs(rawEvs []hkGestEv) (
 				IsOn: a.isOn,
 				T:    t,
 			}
+		case swp:
+			evs[evI] = swipes.Event{
+				Dir: a.dir,
+				T:   t,
+			}
 		default:
 			panic("Unexpected action type")
 		}
@@ -215,6 +424,7 @@ func keyPressGest(isOn bool) gst {
 func sendEvs(
 	evs []interface{},
 	hkEvs chan<- monitor.HotkeyEvent,
+	swpEvs chan<- swipes.Event,
 	gestEvC <-chan gestures.Event,
 	got []gestures.Event,
 ) []gestures.Event {
@@ -233,6 +443,8 @@ func sendEvs(
 		switch e := ev.(type) {
 		case monitor.HotkeyEvent:
 			hkEvs <- e
+		case swipes.Event:
+			swpEvs <- e
 		}
 	}
 	close(hkEvs)

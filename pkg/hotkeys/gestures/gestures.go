@@ -4,6 +4,7 @@ package gestures
 import (
 	"time"
 
+	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
 	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
 )
@@ -28,6 +29,14 @@ const (
 	PressLong  Gesture = "hold"
 )
 
+// Gesture types -- Mouse gestures.
+const (
+	SwipeUp    Gesture = "swipe_up"
+	SwipeDown  Gesture = "swipe_down"
+	SwipeLeft  Gesture = "swipe_left"
+	SwipeRight Gesture = "swipe_right"
+)
+
 // Config defines gestures settings.
 type Config struct {
 	ShortPressTTL time.Duration
@@ -47,7 +56,7 @@ const (
 	defaultGestureTTL    = time.Millisecond * 500
 )
 
-// FromHotkeys maps hotkey events to key gestures.
+// FromHotkeys maps hotkey events to key & mouse gestures.
 func FromHotkeys(
 	hkEvs <-chan monitor.HotkeyEvent,
 ) <-chan Event {
@@ -55,24 +64,29 @@ func FromHotkeys(
 		ShortPressTTL: defaultShortPressTTL,
 		GestureTTL:    defaultGestureTTL,
 	}
-	return FromHotkeysCustom(hkEvs, config)
+	swpMon := swipes.NewDefaultMonitor()
+	return FromHotkeysCustom(hkEvs, config, swpMon)
 }
 
-// FromHotkeysCustom maps hotkey events to key gestures with custom options.
+// FromHotkeysCustom maps hotkey events to key & mouse gestures with custom
+// options.
 //
-// When hkEvs is depleted, the returned channel closed.
+// When hkEvs is depleted, swpMon still be stopped and the returned channel
+// closed.
 //
 func FromHotkeysCustom(
 	hkEvs <-chan monitor.HotkeyEvent,
 	config Config,
+	swpMon swipes.Monitor,
 ) <-chan Event {
 	ch := make(chan Event)
-	go mapHkEvs(hkEvs, config, ch)
+	go mapHkEvs(hkEvs, swpMon, config, ch)
 	return ch
 }
 
 func mapHkEvs(
 	hkEvs <-chan monitor.HotkeyEvent,
+	swpMon swipes.Monitor,
 	config Config,
 	ch chan<- Event,
 ) {
@@ -81,31 +95,58 @@ func mapHkEvs(
 		prvT  time.Time
 		hk    hotkey.ID
 		prvHk hotkey.ID
+		swpC  <-chan swipes.Event
+		swpd  bool
 		gests []Gesture
 	)
-	for hkEv := range hkEvs {
-		ch <- Event{hkEv.HkID, []Gesture{keyGesture(hkEv)}, hkEv.T}
+	if swpMon != nil {
+		defer swpMon.Stop()
+		swpC = swpMon.Ch()
+	}
+	for {
+		select {
 
-		t := hkEv.T
-		dt := t.Sub(prvT)
-		prvT = t
-
-		if hkEv.IsOn {
-			if hkEv.HkID != prvHk || dt > config.GestureTTL {
-				gests = nil
+		case hkEv, ok := <-hkEvs:
+			if !ok {
+				return
 			}
-			hk = hkEv.HkID
-			prvHk = 0
-		} else {
-			if hkEv.HkID == hk {
+			ch <- Event{hkEv.HkID, []Gesture{keyGesture(hkEv)}, hkEv.T}
+
+			t := hkEv.T
+			dt := t.Sub(prvT)
+			prvT = t
+
+			if hkEv.IsOn {
+				swpd = false
+				if hkEv.HkID != prvHk || dt > config.GestureTTL {
+					gests = nil
+				}
+				hk = hkEv.HkID
+				prvHk = 0
+				if swpMon != nil {
+					swpMon.Restart()
+				}
+			} else if hkEv.HkID == hk {
 				hk = 0
 				prvHk = hkEv.HkID
-				if dt <= config.ShortPressTTL {
-					gests = append(gests, PressShort)
-				} else {
-					gests = append(gests, PressLong)
+				if swpMon != nil {
+					swpMon.Pause()
 				}
-				ch <- Event{hkEv.HkID, gests, t}
+				if !swpd {
+					if dt <= config.ShortPressTTL {
+						gests = append(gests, PressShort)
+					} else {
+						gests = append(gests, PressLong)
+					}
+					ch <- Event{hkEv.HkID, gests, t}
+				}
+			}
+
+		case swpEv, ok := <-swpC:
+			if ok && hk != 0 {
+				swpd = true
+				gests = append(gests, swipeGesture(swpEv.Dir))
+				ch <- Event{hk, gests, swpEv.T}
 			}
 		}
 	}
@@ -116,4 +157,18 @@ func keyGesture(hkEv monitor.HotkeyEvent) Gesture {
 		return KeyDown
 	}
 	return KeyUp
+}
+
+func swipeGesture(dir swipes.Dir) Gesture {
+	switch dir {
+	case swipes.SwipeUp:
+		return SwipeUp
+	case swipes.SwipeDown:
+		return SwipeDown
+	case swipes.SwipeLeft:
+		return SwipeLeft
+	case swipes.SwipeRight:
+		return SwipeRight
+	}
+	panic("Invalid swipe direction")
 }

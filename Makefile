@@ -16,7 +16,7 @@ mock:
 
 .PHONY: test
 test:
-	@go test -race ./...
+	@go test -race -timeout 1s ./...
 
 .PHONY: clean
 clean:

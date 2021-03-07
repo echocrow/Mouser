@@ -1,10 +1,6 @@
 // Package hotkey (hotkey sub-package) provides keycodes and hotkey registries.
 package hotkey
 
-// #cgo CFLAGS: -D CGO
-// #cgo darwin LDFLAGS: -framework Carbon
-// #include "hotkey.h"
-import "C"
 import (
 	"errors"
 	"sync"
@@ -19,6 +15,26 @@ var (
 // ID holds the ID of a hotkey.
 type ID uint8
 
+// IDProvider describes a hotkey ID provider.
+//go:generate mockery --name "IDProvider"
+type IDProvider interface {
+	NextID() ID
+}
+
+// Engine describes a hotkey registry engine.
+//go:generate mockery --name "Engine"
+type Engine interface {
+	Register(id ID, keyCode KeyCode) (ok bool)
+	Unregister(id ID)
+}
+
+// Registrar describes a hotkey registrar.
+//go:generate mockery --name "Registrar"
+type Registrar interface {
+	Add(key KeyName) (ID, error)
+	Remove(id ID)
+}
+
 // Registry holds a hotkey registry.
 type Registry struct {
 	ipd    IDProvider
@@ -28,7 +44,7 @@ type Registry struct {
 // NewRegistry constructs a new hotkey registry.
 func NewRegistry(engine Engine, ipd IDProvider) Registry {
 	if engine == nil {
-		engine = CEngine{}
+		engine = defaultEngine()
 	}
 	if ipd == nil {
 		ipd = NewIDCounter()
@@ -45,13 +61,13 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 		return 0, ErrIncompleteRegistry
 	}
 
-	keyIndex, err := NameToIndex(key)
+	keyCode, err := NameToCode(key)
 	if err != nil {
 		return 0, err
 	}
 
 	id := reg.ipd.NextID()
-	if ok := reg.engine.Register(id, keyIndex); !ok {
+	if ok := reg.engine.Register(id, keyCode); !ok {
 		return 0, ErrRegistrationFailed
 	}
 
@@ -61,19 +77,6 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 // Remove removes a hotkey to the reg registry.
 func (reg Registry) Remove(id ID) {
 	reg.engine.Unregister(id)
-}
-
-// CEngine implements hotkey engine via C.
-type CEngine struct{}
-
-// Register registers a hotkey via CEngine.
-func (CEngine) Register(id ID, keyIndex KeyIndex) (ok bool) {
-	return bool(C.registerHotkey(C.MouserHotKeyID(id), C.MouserKeyIndex(keyIndex)))
-}
-
-// Unregister unregisters a hotkey via CEngine.
-func (CEngine) Unregister(id ID) {
-	C.unregisterHotkey(C.MouserHotKeyID(id))
 }
 
 // IDCounter implements a simple incremental ID counter.

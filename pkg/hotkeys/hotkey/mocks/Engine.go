@@ -12,13 +12,13 @@ type Engine struct {
 	mock.Mock
 }
 
-// Register provides a mock function with given fields: id, keyIndex
-func (_m *Engine) Register(id hotkey.ID, keyIndex hotkey.KeyIndex) bool {
-	ret := _m.Called(id, keyIndex)
+// Register provides a mock function with given fields: id, keyCode
+func (_m *Engine) Register(id hotkey.ID, keyCode hotkey.KeyCode) bool {
+	ret := _m.Called(id, keyCode)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(hotkey.ID, hotkey.KeyIndex) bool); ok {
-		r0 = rf(id, keyIndex)
+	if rf, ok := ret.Get(0).(func(hotkey.ID, hotkey.KeyCode) bool); ok {
+		r0 = rf(id, keyCode)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}

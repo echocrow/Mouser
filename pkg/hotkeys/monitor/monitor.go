@@ -1,10 +1,6 @@
 // Package monitor allows listening to and dispatching hotkey events.
 package monitor
 
-// #cgo CFLAGS: -D CGO
-// #cgo darwin LDFLAGS: -framework Carbon
-// #include "monitor.h"
-import "C"
 import (
 	"errors"
 	"sync"
@@ -16,12 +12,10 @@ import (
 
 // Monitor errors raised by package monitor.
 var (
-	ErrInitFailed               = errors.New("monitor initialization failed")
-	ErrDeinitFailed             = errors.New("monitor de-initialization failed")
-	ErrAlreadyStarted           = errors.New("monitor already started")
-	ErrNotYetStarted            = errors.New("monitor not yet started")
-	ErrGlobalCMonitorMissing    = errors.New("global C monitor missing")
-	ErrGlobalCMonitorAlreadySet = errors.New("global C monitor already set")
+	ErrInitFailed     = errors.New("monitor initialization failed")
+	ErrDeinitFailed   = errors.New("monitor de-initialization failed")
+	ErrAlreadyStarted = errors.New("monitor already started")
+	ErrNotYetStarted  = errors.New("monitor not yet started")
 )
 
 // HotkeyEvent holds a hotkey event.
@@ -29,6 +23,15 @@ type HotkeyEvent struct {
 	HkID hotkey.ID
 	IsOn bool
 	T    time.Time
+}
+
+// Engine describes a hotkeys monitor engine.
+//go:generate mockery --name "Engine"
+type Engine interface {
+	Init() (ok bool)
+	Start(m *Monitor) error
+	Stop()
+	Deinit() (ok bool)
 }
 
 // Monitor holds a hotkey monitor.
@@ -43,7 +46,7 @@ type Monitor struct {
 // New constructs a new monitor.
 func New(hkReg hotkey.Registrar, engine Engine) *Monitor {
 	if engine == nil {
-		engine = CEngine{}
+		engine = defaultEngine()
 	}
 	return &Monitor{
 		Hotkeys: hkReg,
@@ -121,68 +124,4 @@ func (m *Monitor) Dispatch(event HotkeyEvent) error {
 	}
 	m.eventCh <- event
 	return nil
-}
-
-// CEngine implements monitor engine via C.
-type CEngine struct{}
-
-// Init initializes the engine for monitoring.
-func (CEngine) Init() (ok bool) {
-	return bool(C.initMonitor())
-}
-
-// Start starts the engine for monitoring.
-func (CEngine) Start(m *Monitor) error {
-	err := setGlobalMonitor(m)
-	if err != nil {
-		return err
-	}
-	go C.startMonitor()
-	return nil
-}
-
-// Stop stops the engine from monitoring.
-func (CEngine) Stop() {
-	C.stopMonitor()
-	setGlobalMonitor(nil)
-}
-
-// Deinit deinitializes the engine for monitoring.
-func (CEngine) Deinit() (ok bool) {
-	return bool(C.deinitMonitor())
-}
-
-var (
-	globalCMonitor   *Monitor
-	globalCMonitorMx sync.Mutex
-)
-
-func setGlobalMonitor(m *Monitor) error {
-	globalCMonitorMx.Lock()
-	defer globalCMonitorMx.Unlock()
-	if globalCMonitor != nil && m != nil {
-		return ErrGlobalCMonitorAlreadySet
-	}
-	globalCMonitor = m
-	return nil
-}
-
-//export goHandleHotkeyEvent
-func goHandleHotkeyEvent(cHotkeyID uint8, isOn bool) {
-	globalCMonitorMx.Lock()
-	defer globalCMonitorMx.Unlock()
-
-	m := globalCMonitor
-
-	if m == nil {
-		panic(ErrGlobalCMonitorMissing)
-	}
-
-	hotkeyID := hotkey.ID(cHotkeyID)
-	event := HotkeyEvent{hotkeyID, isOn, time.Now()}
-	err := m.Dispatch(event)
-
-	if err != nil {
-		panic(ErrGlobalCMonitorMissing)
-	}
 }

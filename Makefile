@@ -18,14 +18,6 @@ mock:
 test:
 	@go test -race -timeout 1s ./...
 
-.PHONY: clean
-clean:
-	@rm -rf ./bin/*
-
 .PHONY: build
-build: clean
-	@mkdir -p ./bin
-	@go build \
-		-o ./bin/ \
-		-ldflags="-X 'main.version=${VERSION}' -X 'main.dateate=${BUILD_DATE}'" \
-		./cmd/mouser
+build:
+	@goreleaser --snapshot --skip-publish --rm-dist

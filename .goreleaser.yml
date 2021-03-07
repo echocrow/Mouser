@@ -1,0 +1,19 @@
+project_name: mouser
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: darwin-build
+    main: ./cmd/mouser
+    env: [CGO_ENABLED=1]
+    goos: [darwin]
+    goarch: [amd64]
+
+archives:
+  - id: darwin-build
+    builds: [darwin-build]
+    replacements:
+      darwin: Darwin
+      amd64: x86_64

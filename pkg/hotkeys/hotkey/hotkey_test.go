@@ -1,6 +1,7 @@
 package hotkey_test
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -19,7 +20,7 @@ func newMockIDProvider(staticID hkID) hotkey.IDProvider {
 	return idp
 }
 
-func newMockEngine(t *testing.T, engineOk bool) hotkey.Engine {
+func newMockEngine(t *testing.T, engineOk bool, staticID hkID) hotkey.Engine {
 	e := new(mocks.Engine)
 	e.On("Register", mock.Anything, mock.Anything).Return(
 		func(id hkID, key hotkey.KeyName) error {
@@ -30,18 +31,32 @@ func newMockEngine(t *testing.T, engineOk bool) hotkey.Engine {
 		},
 	)
 	e.On("Unregister").Return()
+	e.On("IDFromEvent", mock.Anything).Return(
+		func(eEvent hotkey.EngineEvent) hkID {
+			if !engineOk {
+				return hotkey.NoID
+			}
+			return staticID
+		},
+		func(eEvent hotkey.EngineEvent) error {
+			if !engineOk {
+				return errors.New("some error")
+			}
+			return nil
+		},
+	)
 	return e
 }
 
 func TestRegistry(t *testing.T) {
 	t.Run("only requires engine", func(t *testing.T) {
-		r := hotkey.NewRegistry(newMockEngine(t, true), nil)
+		r := hotkey.NewRegistry(newMockEngine(t, true, 0), nil)
 		_, err := r.Add("f1")
 		assert.NoError(t, err)
 	})
 
 	t.Run("fails with faulty engine", func(t *testing.T) {
-		r := hotkey.NewRegistry(newMockEngine(t, false), nil)
+		r := hotkey.NewRegistry(newMockEngine(t, false, 0), nil)
 		_, err := r.Add("f1")
 		assert.Error(t, err)
 	})
@@ -62,7 +77,7 @@ func TestRegistry(t *testing.T) {
 			tc := tc
 			t.Run(fmt.Sprint(tc.keyName), func(t *testing.T) {
 				t.Parallel()
-				r := hotkey.NewRegistry(newMockEngine(t, tc.engineOk), idp)
+				r := hotkey.NewRegistry(newMockEngine(t, tc.engineOk, staticID), idp)
 				gotID, err := r.Add(tc.keyName)
 				assert.Equal(t, tc.wantID, gotID)
 				if tc.wantOK {
@@ -73,6 +88,33 @@ func TestRegistry(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestIDFromEvent(t *testing.T) {
+	staticID := hkID(1)
+	mockEngineEvent := hotkey.MockEngineEvent()
+	tests := []struct {
+		eEvent   hotkey.EngineEvent
+		engineOk bool
+		wantOK   bool
+		wantID   hkID
+	}{
+		{mockEngineEvent, true, true, staticID},
+		{mockEngineEvent, false, false, hotkey.NoID},
+	}
+	for i, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprint(i), func(t *testing.T) {
+			r := hotkey.NewRegistry(newMockEngine(t, tc.engineOk, staticID), nil)
+			gotID, err := r.IDFromEvent(tc.eEvent)
+			assert.Equal(t, tc.wantID, gotID)
+			if tc.wantOK {
+				assert.NoError(t, err)
+			} else {
+				assert.Error(t, err)
+			}
+		})
+	}
 }
 
 func TestIDCounter(t *testing.T) {

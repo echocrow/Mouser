@@ -29,6 +29,7 @@ type IDProvider interface {
 type Engine interface {
 	Register(id ID, key KeyName) error
 	Unregister(id ID)
+	IDFromEvent(EngineEvent) (ID, error)
 }
 
 // Registrar describes a hotkey registrar.
@@ -36,6 +37,7 @@ type Engine interface {
 type Registrar interface {
 	Add(key KeyName) (ID, error)
 	Remove(id ID)
+	IDFromEvent(EngineEvent) (ID, error)
 }
 
 // Registry holds a hotkey registry.
@@ -73,6 +75,11 @@ func (reg Registry) Add(key KeyName) (ID, error) {
 // Remove removes a hotkey to the reg registry.
 func (reg Registry) Remove(id ID) {
 	reg.engine.Unregister(id)
+}
+
+// IDFromEvent recovers the hotkey from an engine event.
+func (reg Registry) IDFromEvent(eEvent EngineEvent) (ID, error) {
+	return reg.engine.IDFromEvent(eEvent)
 }
 
 // IDCounter implements a simple incremental ID counter.

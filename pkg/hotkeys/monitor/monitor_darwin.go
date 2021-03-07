@@ -8,7 +8,6 @@ import (
 	"errors"
 	"sync"
 	"time"
-	"unsafe"
 
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
 )
@@ -17,8 +16,6 @@ import (
 var (
 	ErrGlobalCMonitorMissing    = errors.New("global C monitor missing")
 	ErrGlobalCMonitorAlreadySet = errors.New("global C monitor already set")
-	ErrEventDetailsLookupFailed = errors.New("failed to get hotkey event details")
-	ErrInvalidEventReceived     = errors.New("received an invalid hotkey event")
 )
 
 func defaultEngine() Engine {
@@ -114,23 +111,6 @@ func goHandleHotkeyEvent(
 	cEvent C.EventRef,
 	isOn bool,
 ) {
-	var cEventID C.EventHotKeyID
-	if status := C.GetEventParameter(
-		cEvent,
-		C.kEventParamDirectObject,
-		C.typeEventHotKeyID,
-		nil,
-		C.ulong(unsafe.Sizeof(cEventID)),
-		nil,
-		unsafe.Pointer(&cEventID),
-	); status != C.noErr {
-		panic(ErrEventDetailsLookupFailed)
-	}
-
-	if uint(cEventID.signature) != hotkey.MouserHotKeySig {
-		panic(ErrInvalidEventReceived)
-	}
-
 	globalCMonitorMx.Lock()
 	defer globalCMonitorMx.Unlock()
 
@@ -139,7 +119,11 @@ func goHandleHotkeyEvent(
 		panic(ErrGlobalCMonitorMissing)
 	}
 
-	hotkeyID := hotkey.ID(cEventID.id)
+	eEvent := hotkey.EngineEvent(cEvent)
+	hotkeyID, err := m.Hotkeys.IDFromEvent(eEvent)
+	if err != nil {
+		panic(err)
+	}
 	event := HotkeyEvent{hotkeyID, isOn, time.Now()}
 	if err := m.Dispatch(event); err != nil {
 		panic(err)

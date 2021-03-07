@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
+	"github.com/birdkid/mouser/pkg/log"
 )
 
 // Monitor errors raised by package monitor.
@@ -44,6 +45,7 @@ type Monitor struct {
 	eventCh chan HotkeyEvent
 	doneCh  chan struct{}
 	engine  Engine
+	logCb   log.Callback
 	mu      sync.Mutex
 }
 
@@ -56,6 +58,11 @@ func New(hkReg hotkey.Registry, engine Engine) *Monitor {
 		Hotkeys: hkReg,
 		engine:  engine,
 	}
+}
+
+// SetLogCb sets the monitor lgo callback.
+func (m *Monitor) SetLogCb(logCb log.Callback) {
+	m.logCb = logCb
 }
 
 // Start starts hotkey monitoring.
@@ -84,6 +91,10 @@ func (m *Monitor) Start() (
 	m.doneCh = make(chan struct{})
 	m.eventCh = make(chan HotkeyEvent)
 
+	if m.logCb != nil {
+		m.logCb("Hotkey monitor started.")
+	}
+
 	return m.eventCh, m.doneCh, nil
 }
 
@@ -109,6 +120,10 @@ func (m *Monitor) Stop() error {
 	m.doneCh = nil
 	close(m.eventCh)
 	m.eventCh = nil
+
+	if m.logCb != nil {
+		m.logCb("Hotkey monitor stopped.")
+	}
 
 	return nil
 }

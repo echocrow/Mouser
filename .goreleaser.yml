@@ -17,3 +17,50 @@ archives:
     replacements:
       darwin: Darwin
       amd64: x86_64
+
+brews:
+  - ids: [darwin-build]
+    tap:
+      owner: birdkid
+      name: homebrew-tap
+    folder: Formula
+
+    homepage: '{{ replace .GitURL ".git" "" }}'
+    description: Automate actions via mouse gestures.
+    license: LGPL-3.0-or-later
+
+    caveats: |
+      To configure and run mouser, create and edit the config file:
+        mkdir -p ~/.config/mouser && touch ~/.config/mouser/config.yml
+
+      For examples on how to configure mouser, refer to the homepage:
+        #{homepage}
+
+      Note: The first time you run mouser you may need to provide additional
+      permissions to the app:
+        System Perferences > Security & Privacy > Privacy > Accessibility > mouser
+      Once granted, restart mouser.
+
+    plist: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+      <plist version="1.0">
+      <dict>
+        <key>Label</key>
+        <string>#{plist_name}</string>
+        <key>ProgramArguments</key>
+        <array>
+          <string>#{bin}/mouser</string>
+        </array>
+        <key>RunAtLoad</key>
+        <true />
+        <key>KeepAlive</key>
+        <dict>
+          <key>SuccessfulExit</key>
+          <false/>
+        </dict>
+      </dict>
+      </plist>
+
+    test: |
+      system "#{bin}/mouser", "--version"

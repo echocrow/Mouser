@@ -14,3 +14,10 @@ OSStatus handleHotkeyEventUp(
   EventRef event,
   void* context
 );
+
+CGEventRef handleMouseButtonEvent(
+  CGEventTapProxy proxy,
+  CGEventType eventType,
+  CGEventRef event,
+  void *context
+);

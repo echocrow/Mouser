@@ -4,11 +4,11 @@ package hotkey
 // #include <Carbon/Carbon.h>
 import "C"
 
-// KeyCode represents keys as platform-specific code.
+// KeyCode represents keyboard keys as platform-specific code.
 type KeyCode C.CGKeyCode
 
-// NotAKeyCode is the empty KeyCode value.
-const NotAKeyCode KeyCode = 0
+// MouseBtnCode represents mouse buttons as platform-specific code.
+type MouseBtnCode C.CGMouseButton
 
 var keyCodes = map[KeyName]KeyCode{
 	"f1":  C.kVK_F1,
@@ -33,10 +33,19 @@ var keyCodes = map[KeyName]KeyCode{
 	"f20": C.kVK_F20,
 }
 
-// NameToCode converts a key to a key code.
-func NameToCode(key KeyName) (KeyCode, error) {
+var mouseBtnCodes = map[KeyName]MouseBtnCode{
+	"mouse3": 2,
+	"mouse4": 3,
+	"mouse5": 4,
+}
+
+// NameToCode converts a key to a key or mouse button code.
+func NameToCode(key KeyName) (interface{}, error) {
 	if keyCode, ok := keyCodes[key]; ok {
 		return keyCode, nil
 	}
-	return NotAKeyCode, ErrInvalidKeyName
+	if btnCode, ok := mouseBtnCodes[key]; ok {
+		return btnCode, nil
+	}
+	return nil, ErrInvalidKeyName
 }

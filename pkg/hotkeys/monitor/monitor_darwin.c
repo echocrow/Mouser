@@ -21,3 +21,12 @@ OSStatus handleHotkeyEventUp(
   goHandleHotkeyEvent(event, false);
   return CallNextEventHandler(nextCallRef, event);
 }
+
+CGEventRef handleMouseButtonEvent(
+  CGEventTapProxy proxy,
+  CGEventType eventType,
+  CGEventRef event,
+  void *context
+) {
+  return goHandleMouseEvent(event, eventType);
+}

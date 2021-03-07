@@ -9,7 +9,13 @@ import (
 )
 
 // EngineEvent is a platform-specific hotkey engine event.
-type EngineEvent unsafe.Pointer
+type EngineEvent interface{}
+
+// EngineKeyboardEvent is a platform-specific hotkey engine keyboard event.
+type EngineKeyboardEvent unsafe.Pointer
+
+// EngineMouseEvent is a platform-specific hotkey engine mouse event.
+type EngineMouseEvent uintptr
 
 // MockEngineEvent returns an empty mock engine event.
 func MockEngineEvent() EngineEvent {
@@ -23,12 +29,14 @@ var (
 )
 
 const (
-	initKeysLen uint = 8
+	initKeyboardKeysLen uint = 8
+	initMouseBtnsLen    uint = 2
 )
 
 func defaultEngine() Engine {
 	return &CEngine{
-		make(map[ID]C.EventHotKeyRef, initKeysLen),
+		make(map[ID]C.EventHotKeyRef, initKeyboardKeysLen),
+		make(map[MouseBtnCode]ID, initMouseBtnsLen),
 	}
 }
 
@@ -37,17 +45,28 @@ const mouserHotKeySig uint = 'M'<<24 + 'S'<<16 + 'E'<<8 + 'R'<<0
 
 // CEngine implements hotkey engine via C.
 type CEngine struct {
-	refs map[ID]C.EventHotKeyRef
+	keyboardHkRefs map[ID]C.EventHotKeyRef
+
+	mouseHkIDs map[MouseBtnCode]ID
 }
 
 // Register registers a hotkey via CEngine.
 func (e *CEngine) Register(id ID, key KeyName) error {
-	modifiers := uint32(0)
-
-	keyCode, err := NameToCode(key)
+	code, err := NameToCode(key)
 	if err != nil {
 		return err
 	}
+	switch c := code.(type) {
+	case KeyCode:
+		return e.registerKeyboard(id, c)
+	case MouseBtnCode:
+		return e.registerMouse(id, c)
+	}
+	return ErrRegistrationFailed
+}
+
+func (e *CEngine) registerKeyboard(id ID, keyCode KeyCode) error {
+	modifiers := uint32(0)
 
 	eventID := C.EventHotKeyID{
 		C.uint(mouserHotKeySig),
@@ -66,22 +85,44 @@ func (e *CEngine) Register(id ID, key KeyName) error {
 		return ErrRegistrationFailed
 	}
 
-	e.refs[id] = hotkeyRef
+	e.keyboardHkRefs[id] = hotkeyRef
 
+	return nil
+}
+
+func (e *CEngine) registerMouse(id ID, btnCode MouseBtnCode) error {
+	if _, ok := e.mouseHkIDs[btnCode]; ok {
+		return ErrRegistrationFailed
+	}
+	e.mouseHkIDs[btnCode] = id
 	return nil
 }
 
 // Unregister unregisters a hotkey via CEngine.
 func (e *CEngine) Unregister(id ID) {
-	if ref, ok := e.refs[id]; ok {
+	if ref, ok := e.keyboardHkRefs[id]; ok {
 		C.UnregisterEventHotKey(ref)
-		delete(e.refs, id)
+		delete(e.keyboardHkRefs, id)
+	}
+	for btnCode, hkID := range e.mouseHkIDs {
+		if hkID == id {
+			delete(e.mouseHkIDs, btnCode)
+		}
 	}
 }
 
 // IDFromEvent recovers the hotkey ID from an engine event.
 func (e *CEngine) IDFromEvent(eEvent EngineEvent) (ID, error) {
-	cEvent := C.EventRef(eEvent)
+	switch ee := eEvent.(type) {
+	case EngineKeyboardEvent:
+		return e.idFromHotkeyEvent(C.EventRef(ee))
+	case EngineMouseEvent:
+		return e.idFromMouseEvent(C.CGEventRef(ee))
+	}
+	return NoID, ErrInvalidEventReceived
+}
+
+func (e *CEngine) idFromHotkeyEvent(cEvent C.EventRef) (ID, error) {
 	var cEventID C.EventHotKeyID
 	if status := C.GetEventParameter(
 		cEvent,
@@ -100,4 +141,16 @@ func (e *CEngine) IDFromEvent(eEvent EngineEvent) (ID, error) {
 	}
 
 	return ID(cEventID.id), nil
+}
+
+func (e *CEngine) idFromMouseEvent(cEvent C.CGEventRef) (ID, error) {
+	cBtnCode := C.CGEventGetIntegerValueField(
+		cEvent,
+		C.kCGMouseEventButtonNumber,
+	)
+	btnCode := MouseBtnCode(cBtnCode)
+	if id, ok := e.mouseHkIDs[btnCode]; ok {
+		return id, nil
+	}
+	return NoID, nil
 }

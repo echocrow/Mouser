@@ -12,13 +12,20 @@ func TestNameToCode(t *testing.T) {
 	tests := []struct {
 		keyName     hotkey.KeyName
 		wantOk      bool
-		wantKeyCode hotkey.KeyCode
+		wantKeyCode interface{}
 	}{
-		{"", false, hotkey.NotAKeyCode},
-		{"invalidkeyname", false, hotkey.NotAKeyCode},
+		{"", false, nil},
+		{"invalidkeyname", false, nil},
+
 		{"f1", true, 0},
 		{"f20", true, 0},
-		{"f21", false, hotkey.NotAKeyCode},
+		{"f21", false, nil},
+
+		{"mouse1", false, nil},
+		{"mouse2", false, nil},
+		{"mouse3", true, 0},
+		{"mouse5", true, 0},
+		{"mouse6", false, nil},
 	}
 	for _, tc := range tests {
 		tc := tc

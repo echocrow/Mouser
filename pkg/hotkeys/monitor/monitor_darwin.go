@@ -16,6 +16,7 @@ import (
 var (
 	ErrGlobalCMonitorMissing    = errors.New("global C monitor missing")
 	ErrGlobalCMonitorAlreadySet = errors.New("global C monitor already set")
+	ErrInvalidEventReceived     = errors.New("received an invalid monitor event")
 )
 
 func defaultEngine() Engine {
@@ -40,10 +41,23 @@ func setGlobalMonitor(m *Monitor) error {
 // CEngine implements monitor engine via C.
 type CEngine struct {
 	handlerRefs [2]C.EventHandlerRef
+
+	mouseEventTap C.CFMachPortRef
+	mouseLoopSrc  C.CFRunLoopSourceRef
 }
 
 // Init initializes the engine for monitoring.
 func (e *CEngine) Init() (ok bool) {
+	if ok := e.initKeyboard(); !ok {
+		return false
+	}
+	if ok := e.initMouse(); !ok {
+		return false
+	}
+	return true
+}
+
+func (e *CEngine) initKeyboard() (ok bool) {
 	// Note:
 	// We use the older Carbon Event Manager instead of the newer, more
 	// robust Quartz Event Services for keyboard events. This is because
@@ -80,6 +94,34 @@ func (e *CEngine) Init() (ok bool) {
 	return true
 }
 
+func (e *CEngine) initMouse() (ok bool) {
+	eventMask := uint(1<<C.kCGEventOtherMouseDown | 1<<C.kCGEventOtherMouseUp)
+	eventTap := C.CGEventTapCreate(
+		C.kCGHIDEventTap,
+		C.kCGHeadInsertEventTap,
+		0,
+		C.CGEventMask(eventMask),
+		(*[0]byte)(C.handleMouseButtonEvent),
+		nil,
+	)
+	if eventTap == 0 {
+		return false
+	}
+	e.mouseEventTap = eventTap
+
+	C.CGEventTapEnable(eventTap, true)
+
+	loopSrc := C.CFMachPortCreateRunLoopSource(
+		C.kCFAllocatorDefault,
+		e.mouseEventTap,
+		0,
+	)
+	C.CFRunLoopAddSource(C.CFRunLoopGetMain(), loopSrc, C.kCFRunLoopCommonModes)
+	e.mouseLoopSrc = loopSrc
+
+	return true
+}
+
 // Start starts the engine for monitoring.
 func (*CEngine) Start(m *Monitor) error {
 	if err := setGlobalMonitor(m); err != nil {
@@ -101,6 +143,17 @@ func (*CEngine) Stop() {
 // Deinit deinitializes the engine for monitoring.
 func (e *CEngine) Deinit() (ok bool) {
 	ok = true
+	if ok := e.deinitKeyboard(); !ok {
+		ok = false
+	}
+	if ok := e.deinitMouse(); !ok {
+		ok = false
+	}
+	return
+}
+
+func (e *CEngine) deinitKeyboard() (ok bool) {
+	ok = true
 
 	if status := C.RemoveEventHandler(e.handlerRefs[0]); status != C.noErr {
 		ok = false
@@ -113,6 +166,24 @@ func (e *CEngine) Deinit() (ok bool) {
 	e.handlerRefs[1] = nil
 
 	return
+}
+
+func (e *CEngine) deinitMouse() (ok bool) {
+	if eventTap := e.mouseEventTap; eventTap != 0 {
+		C.CGEventTapEnable(eventTap, false)
+		e.mouseEventTap = 0
+	}
+
+	if loopSrc := e.mouseLoopSrc; loopSrc != 0 {
+		C.CFRunLoopRemoveSource(
+			C.CFRunLoopGetMain(),
+			loopSrc,
+			C.kCFRunLoopCommonModes,
+		)
+		e.mouseLoopSrc = 0
+	}
+
+	return true
 }
 
 //export goHandleHotkeyEvent
@@ -128,7 +199,7 @@ func goHandleHotkeyEvent(
 		panic(ErrGlobalCMonitorMissing)
 	}
 
-	eEvent := hotkey.EngineEvent(cEvent)
+	eEvent := hotkey.EngineKeyboardEvent(cEvent)
 	hotkeyID, err := m.Hotkeys.IDFromEvent(eEvent)
 	if err != nil {
 		panic(err)
@@ -137,4 +208,45 @@ func goHandleHotkeyEvent(
 	if err := m.Dispatch(event); err != nil {
 		panic(err)
 	}
+}
+
+//export goHandleMouseEvent
+func goHandleMouseEvent(
+	cEvent C.CGEventRef,
+	cEventType C.CGEventType,
+) C.CGEventRef {
+	var isOn bool
+	switch cEventType {
+	case C.kCGEventOtherMouseDown:
+		isOn = true
+	case C.kCGEventOtherMouseUp:
+		isOn = false
+	case C.kCGEventTapDisabledByUserInput, C.kCGEventTapDisabledByTimeout:
+		return cEvent
+	default:
+		panic(ErrInvalidEventReceived)
+	}
+
+	globalCMonitorMx.Lock()
+	defer globalCMonitorMx.Unlock()
+
+	m := globalCMonitor
+	if m == nil {
+		panic(ErrGlobalCMonitorMissing)
+	}
+
+	eEvent := hotkey.EngineMouseEvent(cEvent)
+	hotkeyID, err := m.Hotkeys.IDFromEvent(eEvent)
+	if err != nil {
+		panic(err)
+	}
+	if hotkeyID == hotkey.NoID {
+		return cEvent
+	}
+
+	event := HotkeyEvent{hotkeyID, isOn, time.Now()}
+	if err := m.Dispatch(event); err != nil {
+		panic(err)
+	}
+	return 0
 }

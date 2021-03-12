@@ -92,7 +92,7 @@ func watchEvs(
 			for _, ga := range gas {
 				if ga.G.matches(event.Gests) {
 					if ga.A != nil {
-						ga.A()
+						go ga.A()
 					}
 					break
 				}

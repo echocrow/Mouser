@@ -14,7 +14,8 @@ type Logger interface {
 // New instantiates the a new basic logger.
 func New(name string) Logger {
 	logPrefix := "[" + name + "] "
-	return log.New(log.Writer(), logPrefix, log.Flags())
+	flags := log.Ldate | log.Ltime | log.Lmicroseconds | log.Lmsgprefix
+	return log.New(log.Writer(), logPrefix, flags)
 }
 
 // NewCallback creates a new basic log callback.

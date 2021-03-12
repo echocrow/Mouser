@@ -84,7 +84,7 @@ func (m *Monitor) Start() (
 	m.eventCh = make(chan HotkeyEvent)
 
 	if m.logCb != nil {
-		m.logCb("Hotkey monitor started.")
+		m.logCb("Started")
 	}
 
 	return m.eventCh, nil
@@ -109,7 +109,7 @@ func (m *Monitor) Stop() error {
 	m.eventCh = nil
 
 	if m.logCb != nil {
-		m.logCb("Hotkey monitor stopped.")
+		m.logCb("Stopped")
 	}
 
 	return nil

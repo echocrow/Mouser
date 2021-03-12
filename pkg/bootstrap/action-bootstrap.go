@@ -6,6 +6,7 @@ import (
 
 	"github.com/birdkid/mouser/pkg/actions"
 	"github.com/birdkid/mouser/pkg/config"
+	"github.com/birdkid/mouser/pkg/log"
 )
 
 const (
@@ -44,19 +45,45 @@ func newActionsRepo(
 	}
 }
 
+func newLoggedAction(
+	a actions.Action,
+	name string,
+	logger log.Logger,
+) actions.Action {
+	return func() {
+		logger.Printf(name)
+		a()
+	}
+}
+
 // get retrieves an action ref into an action.
-func (ar actionsRepo) get(aRef config.ActionRef) (actions.Action, error) {
+func (ar actionsRepo) get(
+	aRef config.ActionRef,
+	logger log.Logger,
+) (a actions.Action, err error) {
 	aci := aRef.A
 	switch ac := aci.(type) {
 	case config.BasicAction:
-		return ar.resolveActionName(ac.Name, ac.Args)
+		a, err = ar.resolveActionName(ac.Name, ac.Args)
+		if err == nil && logger != nil {
+			a = newLoggedAction(a, ac.Name, logger)
+		}
+		return
 	case config.AppBranchAction:
-		return ar.resolveAppBranchAction(ac)
+		a, err = ar.resolveAppBranchAction(ac)
+		if err == nil && logger != nil {
+			a = newLoggedAction(a, "inline_app_branch", logger)
+		}
+		return
 	case nil:
 		return nil, nil
 	default:
 		return nil, errors.New("invalid action type")
 	}
+}
+
+func (ar actionsRepo) getNested(aRef config.ActionRef) (actions.Action, error) {
+	return ar.get(aRef, nil)
 }
 
 func (ar actionsRepo) resolveActionName(
@@ -73,7 +100,7 @@ func (ar actionsRepo) resolveActionName(
 		}
 		la.wip = true
 		aRef := la.aRef
-		a, err := ar.get(aRef)
+		a, err := ar.getNested(aRef)
 		if err != nil {
 			return nil, err
 		}
@@ -123,14 +150,14 @@ func (ar actionsRepo) resolveAppBranchAction(
 ) (actions.Action, error) {
 	branches := make(map[string]actions.Action, len(ac.Branches))
 	for app, aRef := range ac.Branches {
-		a, err := ar.get(aRef)
+		a, err := ar.getNested(aRef)
 		if err != nil {
 			return nil, err
 		}
 		branches[app] = a
 	}
 
-	fallback, err := ar.get(ac.Fallback)
+	fallback, err := ar.getNested(ac.Fallback)
 	if err != nil {
 		return nil, err
 	}
@@ -148,13 +175,14 @@ type gestureAction struct {
 func makeGestureAction(
 	gac config.GestureAction,
 	ar actionsRepo,
+	logger log.Logger,
 ) (gestureAction, error) {
 	gm, err := makeGestureMatcher(gac)
 	if err != nil {
 		return gestureAction{}, err
 	}
 
-	a, err := ar.get(gac.Action)
+	a, err := ar.get(gac.Action, logger)
 	if err != nil {
 		return gestureAction{}, err
 	}

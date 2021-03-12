@@ -10,6 +10,7 @@ import (
 	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
 	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
+	"github.com/birdkid/mouser/pkg/log"
 )
 
 // Bootstrap kickstarts mouser.
@@ -25,6 +26,11 @@ func Bootstrap(conf config.Config) (
 		return nil, nil, err
 	}
 
+	var evLogger log.Logger
+	if conf.Settings.Debug {
+		evLogger = log.New("Gesture")
+	}
+
 	run = func() error {
 		hkEvs, err := m.Start()
 		if err != nil {
@@ -35,7 +41,7 @@ func Bootstrap(conf config.Config) (
 			newGesturesConfig(conf.Settings.Gestures),
 			swipes.NewCustomMonitor(newSwipesConfig(conf.Settings.Swipes)),
 		)
-		watchEvs(gestCh, hkGas)
+		watchEvs(gestCh, hkGas, evLogger)
 		return nil
 	}
 
@@ -61,13 +67,18 @@ func registerHotKeys(
 
 	actRepo := newActionsRepo(conf.Actions, conf.Settings)
 
+	var actionLogger log.Logger
+	if conf.Settings.Debug {
+		actionLogger = log.New("Action")
+	}
+
 	hkGas := make(map[hotkey.ID][]gestureAction, len(conf.HotKeys))
 	for alias, gestActs := range conf.HotKeys {
 		key := makeKey(alias, conf.Mappings)
 		gas := make([]gestureAction, len(gestActs))
 
 		for i, gac := range gestActs {
-			ga, err := makeGestureAction(gac, actRepo)
+			ga, err := makeGestureAction(gac, actRepo, actionLogger)
 			if err != nil {
 				return nil, err
 			}
@@ -86,8 +97,12 @@ func registerHotKeys(
 func watchEvs(
 	gestCh <-chan gestures.Event,
 	hkGas map[hotkey.ID][]gestureAction,
+	logger log.Logger,
 ) {
 	for event := range gestCh {
+		if logger != nil {
+			logger.Printf("Hk=%d Gests=%s", event.HkID, event.Gests)
+		}
 		if gas, ok := hkGas[event.HkID]; ok {
 			for _, ga := range gas {
 				if ga.G.matches(event.Gests) {

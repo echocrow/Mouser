@@ -11,6 +11,7 @@ import (
 
 	"github.com/birdkid/mouser/pkg/bootstrap"
 	"github.com/birdkid/mouser/pkg/config"
+	"github.com/birdkid/mouser/pkg/log"
 )
 
 // version is the version of this app set at build-time.
@@ -41,6 +42,13 @@ func main() {
 			abort(2, defConfPathErr)
 		}
 		confPath = defConfPath
+	}
+
+	var logger log.Logger
+	if verbose {
+		logger = log.New("Mouser")
+		logger.Printf("Version=%s", version)
+		logger.Printf("ConfigPath=%s", confPath)
 	}
 
 	conf, err := parseConfig(confPath)

@@ -139,6 +139,13 @@ func mapHkEvs(
 		defer swpMon.Stop()
 		swpC = swpMon.Init()
 	}
+	handleSwpEv := func(hk hotkey.ID, swpEv swipes.Event) {
+		if swpEv.IsSwipe() {
+			swpd = true
+			gests = appendGest(gests, config.Cap, swipeGesture(swpEv.Dir))
+			ch <- Event{hk, gests, swpEv.T}
+		}
+	}
 	for {
 		select {
 
@@ -166,7 +173,8 @@ func mapHkEvs(
 				hk = 0
 				prvHk = hkEv.HkID
 				if swpMon != nil {
-					swpMon.Pause()
+					swpEv := swpMon.Pause(hkEv.T)
+					handleSwpEv(prvHk, swpEv)
 				}
 				if !swpd {
 					if dt <= config.ShortPressTTL {
@@ -180,9 +188,7 @@ func mapHkEvs(
 
 		case swpEv, ok := <-swpC:
 			if ok && hk != 0 {
-				swpd = true
-				gests = appendGest(gests, config.Cap, swipeGesture(swpEv.Dir))
-				ch <- Event{hk, gests, swpEv.T}
+				handleSwpEv(hk, swpEv)
 			}
 		}
 	}

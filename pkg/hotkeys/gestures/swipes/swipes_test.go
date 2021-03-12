@@ -25,12 +25,12 @@ const (
 type sDir = swipes.Dir
 
 func newMockPointerEngine(
-	staticPos vec.Vec2D,
+	startP vec.Vec2D,
 	evs <-chan swipes.PointerEvent,
 	sent chan<- struct{},
 	done chan<- struct{},
-) *mocks.PointerEngine {
-	e := new(mocks.PointerEngine)
+) (e *mocks.PointerEngine, setPos func(vec.Vec2D)) {
+	e = new(mocks.PointerEngine)
 
 	sig := make(chan bool)
 	stop := make(chan struct{})
@@ -65,7 +65,10 @@ func newMockPointerEngine(
 		}
 	}
 
-	e.On("GetPointerPos").Return(staticPos)
+	pos := startP
+	setPos = func(p vec.Vec2D) { pos = p }
+
+	e.On("GetPointerPos").Return(func() vec.Vec2D { return pos })
 	e.On("Init", mock.AnythingOfType("chan<- swipes.PointerEvent")).Run(
 		func(args mock.Arguments) {
 			ch := args.Get(0).(chan<- swipes.PointerEvent)
@@ -88,7 +91,7 @@ func newMockPointerEngine(
 			close(stop)
 		}
 	})
-	return e
+	return e, setPos
 }
 
 func newMockPointerMonitor(
@@ -205,7 +208,7 @@ func TestPointerMonitorStartStop(t *testing.T) {
 			t.Run(tn, func(t *testing.T) {
 				t.Parallel()
 
-				e := newMockPointerEngine(vec.Vec2D{}, nil, nil, nil)
+				e, _ := newMockPointerEngine(vec.Vec2D{}, nil, nil, nil)
 				m := newMockPointerMonitor(swipes.Config{}, e)
 				if withInit {
 					m.Init()
@@ -213,8 +216,8 @@ func TestPointerMonitorStartStop(t *testing.T) {
 
 				for i := 0; i < repeats; i++ {
 					m.Restart()
-					m.Pause()
-					m.Pause()
+					m.Pause(time.Time{})
+					m.Pause(time.Time{})
 				}
 				m.Stop()
 				m.Stop()
@@ -245,13 +248,15 @@ func TestPointerMonitorCh(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		origin   vec.Vec2D
+		startP   vec.Vec2D
 		ptSwpEvs []ptSwpEv
+		endPtSwp ptSwpEv
 	}{
 		{
 			"detects nothing",
 			vec.Vec2D{},
 			[]ptSwpEv{},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"detects no movement",
@@ -262,6 +267,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{1, 0, 0, sNil},
 				{1, 0, 0, sNil},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"detect simple swipes",
@@ -282,6 +288,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{1, -(minDist * 4), +(minDist * 2), sLeft},
 				{1, +(minDist * 2), -(minDist * 4), sDown},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"ignores small movement",
@@ -292,6 +299,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{1, -minDist / 4, 0, sNil},
 				{1, 0, -minDist / 4, sNil},
 			},
+			ptSwpEv{1, minDist / 4, 0, sNil},
 		},
 		{
 			"throttles duplicates",
@@ -303,6 +311,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{throtD / 3, minDist, 0, sNil},
 				{throtD / 3, minDist, 0, sRight},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"does not throttle after direction change",
@@ -315,6 +324,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{throtD / 4, +minDist, 0, sRight},
 				{throtD / 4, -minDist, 0, sLeft},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"detects slow swipes",
@@ -330,6 +340,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{throtD * 10, minDist, 0, sRight},
 				{throtD * 10, minDist, 0, sRight},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"builds swipes and resets",
@@ -342,6 +353,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{throtD, 0, minDist / 3, sNil},
 				{throtD, 0, minDist / 3, sUp},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"discards throttled swipe direction",
@@ -351,6 +363,7 @@ func TestPointerMonitorCh(t *testing.T) {
 				{throtD / 4, minDist * 10, 0, sNil},
 				{throtD / 4, 0, minDist, sUp},
 			},
+			ptSwpEv{0, 0, 0, sNil},
 		},
 		{
 			"detects progressive diagonal swipes",
@@ -368,6 +381,30 @@ func TestPointerMonitorCh(t *testing.T) {
 				{1, minDistPyth2b, 0, sNil},
 				{1, minDistPyth2b, 0, sRight},
 			},
+			ptSwpEv{0, 0, 0, sNil},
+		},
+		{
+			"detects fast release swipe",
+			vec.Vec2D{},
+			[]ptSwpEv{},
+			ptSwpEv{1, minDist, 0, sRight},
+		},
+		{
+			"detects slow release swipe",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{1, minDist, 0, sRight},
+				{1, 0, -minDist, sDown},
+			},
+			ptSwpEv{throtD * 2, 0, -minDist, sDown},
+		},
+		{
+			"discards throttled release swipe",
+			vec.Vec2D{},
+			[]ptSwpEv{
+				{1, minDist, 0, sRight},
+			},
+			ptSwpEv{throtD / 2, minDist, 0, sNil},
 		},
 	}
 	for _, tc := range tests {
@@ -388,10 +425,14 @@ func TestPointerMonitorCh(t *testing.T) {
 					MinDist:  minDist,
 					Throttle: time.Duration(throtD) * time.Second,
 				}
-				e := newMockPointerEngine(tc.origin, evsCh, sent, engineDone)
+				e, setPos := newMockPointerEngine(tc.startP, evsCh, sent, engineDone)
 				m := newMockPointerMonitor(config, e)
 
-				ptrEvs, wantSwpEvs, swpsL := newPtSwpEvs(tc.ptSwpEvs, rot)
+				ptrEvs, wantSwpEvs, swpsL, pauseT, endP := newPtSwpEvs(
+					tc.ptSwpEvs,
+					rot,
+					tc.endPtSwp,
+				)
 				got := make([]swipes.Event, 0, swpsL)
 				var gotMx sync.RWMutex
 
@@ -401,6 +442,10 @@ func TestPointerMonitorCh(t *testing.T) {
 
 				doneRead := make(chan struct{})
 				maxRead := make(chan struct{})
+				swpsChL := len(wantSwpEvs)
+				if tc.endPtSwp.swpD != sNil {
+					swpsChL--
+				}
 				go func() {
 					defer close(doneRead)
 					defer close(maxRead)
@@ -408,7 +453,7 @@ func TestPointerMonitorCh(t *testing.T) {
 						gotMx.Lock()
 						got = append(got, ev)
 						gotMx.Unlock()
-						if len(got) == len(wantSwpEvs) {
+						if len(got) == swpsChL {
 							maxRead <- struct{}{}
 						}
 					}
@@ -420,8 +465,13 @@ func TestPointerMonitorCh(t *testing.T) {
 					<-sent
 				}
 
-				if len(wantSwpEvs) > 0 {
+				if swpsChL > 0 {
 					<-maxRead
+				}
+
+				setPos(endP)
+				if ev := m.Pause(pauseT); ev.IsSwipe() {
+					got = append(got, ev)
 				}
 
 				gotMx.RLock()
@@ -460,19 +510,23 @@ type ptSwpEv struct {
 	swpD   sDir
 }
 
-func newPtSwpEvs(rawEvs []ptSwpEv, rot uint) (
+func newPtSwpEvs(rawEvs []ptSwpEv, rot uint, endEv ptSwpEv) (
 	ptrEvs []swipes.PointerEvent,
 	swpEvs []swipes.Event,
 	swpsL uint,
+	pauseT time.Time,
+	endP vec.Vec2D,
 ) {
 	rad := float64(rot) * math.Pi / 2
 
-	for _, rawEv := range rawEvs {
+	allEvs := append(rawEvs, endEv)
+
+	for _, rawEv := range allEvs {
 		if rawEv.swpD != sNil {
 			swpsL++
 		}
 	}
-	ptrEvs = make([]swipes.PointerEvent, len(rawEvs))
+	ptrEvs = make([]swipes.PointerEvent, len(allEvs))
 	swpEvs = make([]swipes.Event, swpsL)
 
 	t := time.Time{}
@@ -480,7 +534,7 @@ func newPtSwpEvs(rawEvs []ptSwpEv, rot uint) (
 	y := float64(0)
 	ptrI := 0
 	swpI := 0
-	for _, rawEv := range rawEvs {
+	for _, rawEv := range allEvs {
 		t = t.Add(time.Second * time.Duration(rawEv.dt))
 
 		x = x + rawEv.xd
@@ -500,6 +554,13 @@ func newPtSwpEvs(rawEvs []ptSwpEv, rot uint) (
 			swpI++
 		}
 	}
+
+	ptrEvsL := len(ptrEvs) - 1
+	endPtrEv := ptrEvs[ptrEvsL]
+	ptrEvs = ptrEvs[:ptrEvsL]
+	pauseT = endPtrEv.T
+	endP = endPtrEv.Pos
+
 	return
 }
 

@@ -51,7 +51,7 @@ type PointerEvent struct {
 type Monitor interface {
 	Init() <-chan Event
 	Restart()
-	Pause()
+	Pause(time.Time) Event
 	Stop()
 }
 
@@ -106,10 +106,12 @@ type PointerMonitor struct {
 	ch     chan Event
 	engine PointerEngine
 	ptEvs  <-chan PointerEvent
-	reset  chan struct{}
 	stop   chan struct{}
 	state  monitorState
 	mx     sync.RWMutex
+
+	prPos vec.Vec2D
+	prEv  Event
 }
 
 // NewPointerMonitor creates a new swipes pointer monitor.
@@ -120,7 +122,6 @@ func NewPointerMonitor(config Config, engine PointerEngine) *PointerMonitor {
 	return &PointerMonitor{
 		cfg:    config,
 		engine: engine,
-		reset:  make(chan struct{}),
 		stop:   make(chan struct{}),
 	}
 }
@@ -148,29 +149,35 @@ func (m *PointerMonitor) Restart() {
 		return
 	}
 
-	m.Pause()
-
-	m.reset <- struct{}{}
-	m.engine.Resume()
+	m.Pause(time.Time{})
 
 	m.mx.Lock()
 	defer m.mx.Unlock()
+
+	m.prPos = m.engine.GetPointerPos()
+	m.engine.Resume()
 	m.state = monitorOn
 }
 
 // Pause pauses swipe monitoring.
-func (m *PointerMonitor) Pause() {
+func (m *PointerMonitor) Pause(t time.Time) (ev Event) {
 	if m.state < monitorReady {
 		return
 	}
 
 	if m.state == monitorOn {
 		m.engine.Pause()
+		if !t.IsZero() {
+			ptEv := PointerEvent{m.engine.GetPointerPos(), t}
+			ev = m.handlePtEv(ptEv)
+		}
 	}
 
 	m.mx.Lock()
 	defer m.mx.Unlock()
 	m.state = monitorReady
+
+	return
 }
 
 // Stop stops swipe monitoring.
@@ -185,44 +192,46 @@ func (m *PointerMonitor) Stop() {
 
 	m.engine.Stop()
 	close(m.stop)
-	close(m.reset)
 	close(m.ch)
 }
 
 func (m *PointerMonitor) watch() {
-	origin := m.engine.GetPointerPos()
-	prEv := Event{}
-
 	for {
 		select {
 		case ptEv, ok := <-m.ptEvs:
 			if !ok {
 				return
 			}
-			p := ptEv.Pos
-			dp := p.Sub(origin)
-			dir := dirFromVec2(dp, m.cfg.MinDist)
-			if dir != NoSwipe {
-				if dir != prEv.Dir || ptEv.T.Sub(prEv.T) > m.cfg.Throttle {
-					ev := Event{dir, ptEv.T}
-					prEv = ev
-					m.mx.RLock()
-					if m.state == monitorOn {
-						m.ch <- ev
-					}
-					m.mx.RUnlock()
+			ev := m.handlePtEv(ptEv)
+			if ev.IsSwipe() {
+				m.mx.RLock()
+				if m.state == monitorOn {
+					m.ch <- ev
 				}
-				origin = p
+				m.mx.RUnlock()
 			}
-		case _, ok := <-m.reset:
-			if !ok {
-				return
-			}
-			origin = m.engine.GetPointerPos()
 		case <-m.stop:
 			return
 		}
 	}
+}
+
+func (m *PointerMonitor) handlePtEv(ptEv PointerEvent) (ev Event) {
+	m.mx.Lock()
+	defer m.mx.Unlock()
+
+	p := ptEv.Pos
+	dp := p.Sub(m.prPos)
+	dir := dirFromVec2(dp, m.cfg.MinDist)
+	if dir != NoSwipe {
+		m.prPos = p
+		if dir != m.prEv.Dir || ptEv.T.Sub(m.prEv.T) > m.cfg.Throttle {
+			ev = Event{dir, ptEv.T}
+			m.prEv = ev
+		}
+	}
+
+	return
 }
 
 func dirFromVec2(v vec.Vec2D, minDist float64) Dir {

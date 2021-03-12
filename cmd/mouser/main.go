@@ -24,6 +24,9 @@ func main() {
 		defConfPath,
 	))
 
+	var verbose bool
+	flag.BoolVar(&verbose, "v", false, "Verbose")
+
 	var getVersion bool
 	flag.BoolVar(&getVersion, "version", false, "Print the app version & exit.")
 
@@ -43,6 +46,10 @@ func main() {
 	conf, err := parseConfig(confPath)
 	if err != nil {
 		abort(2, err)
+	}
+
+	if verbose {
+		conf.Settings.Debug = true
 	}
 
 	run, stop, err := bootstrap.Bootstrap(conf)

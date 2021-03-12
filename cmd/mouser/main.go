@@ -18,10 +18,10 @@ var version = "0.0.0-dev"
 
 func main() {
 	var confPath string
-	defaultConfPath, _ := defaultConfigPath()
+	defConfPath, defConfPathErr := defaultConfigPath()
 	flag.StringVar(&confPath, "config", "", fmt.Sprintf(
 		"The path to the config file. Defaults to %s.",
-		defaultConfPath,
+		defConfPath,
 	))
 
 	var getVersion bool
@@ -31,6 +31,13 @@ func main() {
 
 	if getVersion {
 		exitMessage(0, fmt.Sprint("mouser ", version))
+	}
+
+	if confPath == "" {
+		if defConfPathErr != nil {
+			abort(2, defConfPathErr)
+		}
+		confPath = defConfPath
 	}
 
 	conf, err := parseConfig(confPath)
@@ -77,12 +84,6 @@ func exitMessage(code int, msg string) {
 
 func parseConfig(confPath string) (config.Config, error) {
 	var err error
-
-	if confPath == "" {
-		if confPath, err = defaultConfigPath(); err != nil {
-			return config.Config{}, fmt.Errorf("error getting default config path: %s", err)
-		}
-	}
 
 	if confPath == "" {
 		return config.Config{}, fmt.Errorf("config path is required")

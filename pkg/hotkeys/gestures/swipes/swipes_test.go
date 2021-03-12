@@ -98,6 +98,37 @@ func newMockPointerMonitor(
 	return swipes.NewPointerMonitor(config, e)
 }
 
+func TestEventIsSwipe(t *testing.T) {
+	tests := []struct {
+		name string
+		ev   swipes.Event
+		want bool
+	}{
+		{
+			"empty event has no swipe",
+			swipes.Event{},
+			false,
+		},
+		{
+			"swipe event has swipe",
+			swipes.Event{sDown, time.Time{}},
+			true,
+		},
+		{
+			"empty swipe event has no swipe",
+			swipes.Event{sNil, time.Unix(1, 0)},
+			false,
+		},
+	}
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.ev.IsSwipe()
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}
+
 func TestRotateDir(t *testing.T) {
 	tests := []struct {
 		name  string

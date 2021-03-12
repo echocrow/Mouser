@@ -35,6 +35,11 @@ type Event struct {
 	T   time.Time
 }
 
+// IsSwipe checks whether Event ev denotes a swipe movement.
+func (ev Event) IsSwipe() bool {
+	return ev.Dir != NoSwipe
+}
+
 // PointerEvent represents a pointer position at a given time.
 type PointerEvent struct {
 	Pos vec.Vec2D

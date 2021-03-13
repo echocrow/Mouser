@@ -45,17 +45,6 @@ func newActionsRepo(
 	}
 }
 
-func newLoggedAction(
-	a actions.Action,
-	name string,
-	logger log.Logger,
-) actions.Action {
-	return func() {
-		logger.Printf(name)
-		a()
-	}
-}
-
 // get retrieves an action ref into an action.
 func (ar actionsRepo) get(
 	aRef config.ActionRef,
@@ -170,6 +159,19 @@ func (ar actionsRepo) resolveAppBranchAction(
 type gestureAction struct {
 	G gestureMatcher
 	A actions.Action
+}
+
+func newLoggedAction(
+	a actions.Action,
+	name string,
+	logger log.Logger,
+) actions.Action {
+	return func() {
+		logger.Printf(name)
+		if a != nil {
+			a()
+		}
+	}
 }
 
 func makeGestureAction(

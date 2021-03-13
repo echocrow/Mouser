@@ -32,6 +32,7 @@ type Engine interface {
 	Start(m *Monitor) error
 	Stop()
 	Deinit() (ok bool)
+	SetLogCb(logCb log.Callback)
 }
 
 // Monitor holds a hotkey monitor.
@@ -54,9 +55,10 @@ func New(hkReg hotkey.Registrar, engine Engine) *Monitor {
 	}
 }
 
-// SetLogCb sets the monitor lgo callback.
+// SetLogCb sets the monitor log callback.
 func (m *Monitor) SetLogCb(logCb log.Callback) {
 	m.logCb = logCb
+	m.engine.SetLogCb(logCb)
 }
 
 // Start starts hotkey monitoring.

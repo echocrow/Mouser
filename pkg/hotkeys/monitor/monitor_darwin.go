@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
+	"github.com/birdkid/mouser/pkg/log"
 )
 
 // Monitor errors raised by package monitor.
@@ -43,11 +44,17 @@ const appLoopQuitTimeout = time.Second
 // CEngine implements monitor engine via C.
 type CEngine struct {
 	loopC chan struct{}
+	logCb log.Callback
 
 	handlerRefs [2]C.EventHandlerRef
 
 	mouseEventTap C.CFMachPortRef
 	mouseLoopSrc  C.CFRunLoopSourceRef
+}
+
+// SetLogCb sets the monitor lgo callback.
+func (e *CEngine) SetLogCb(logCb log.Callback) {
+	e.logCb = logCb
 }
 
 // Init initializes the engine for monitoring.
@@ -150,6 +157,9 @@ func (e *CEngine) Stop() {
 	select {
 	case <-e.loopC:
 	case <-time.After(appLoopQuitTimeout):
+		if e.logCb != nil {
+			e.logCb("Engine stop timed out")
+		}
 	}
 
 	setGlobalMonitor(nil)

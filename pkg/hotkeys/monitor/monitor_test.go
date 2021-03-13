@@ -40,6 +40,7 @@ func newMockEngine() (*mocks.Engine, mockEngineFiddler) {
 	e.On("Deinit").Return(func() bool {
 		return eInitOk
 	})
+	e.On("SetLogCb", mock.Anything).Return()
 	return e, setOks
 }
 

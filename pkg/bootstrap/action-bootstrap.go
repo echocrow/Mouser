@@ -2,6 +2,7 @@ package bootstrap
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/birdkid/mouser/pkg/actions"
@@ -48,31 +49,26 @@ func newActionsRepo(
 // get retrieves an action ref into an action.
 func (ar actionsRepo) get(
 	aRef config.ActionRef,
-	logger log.Logger,
-) (a actions.Action, err error) {
+) (a actions.Action, name string, err error) {
 	aci := aRef.A
 	switch ac := aci.(type) {
 	case config.BasicAction:
 		a, err = ar.resolveActionName(ac.Name, ac.Args)
-		if err == nil && logger != nil {
-			a = newLoggedAction(a, ac.Name, logger)
-		}
-		return
+		name = ac.Name
 	case config.AppBranchAction:
 		a, err = ar.resolveAppBranchAction(ac)
-		if err == nil && logger != nil {
-			a = newLoggedAction(a, "inline_app_branch", logger)
-		}
-		return
+		name = "(app-branch)"
 	case nil:
-		return nil, nil
+		return nil, "(empty-action)", nil
 	default:
-		return nil, errors.New("invalid action type")
+		return nil, "", errors.New("invalid action type")
 	}
+	return
 }
 
 func (ar actionsRepo) getNested(aRef config.ActionRef) (actions.Action, error) {
-	return ar.get(aRef, nil)
+	a, _, err := ar.get(aRef)
+	return a, err
 }
 
 func (ar actionsRepo) resolveActionName(
@@ -85,7 +81,7 @@ func (ar actionsRepo) resolveActionName(
 
 	if la, ok := ar.r[name]; ok {
 		if la.wip {
-			return nil, errors.New("circular action reference found")
+			return nil, fmt.Errorf("circular action reference at \"%s\"", name)
 		}
 		la.wip = true
 		aRef := la.aRef
@@ -184,9 +180,11 @@ func makeGestureAction(
 		return gestureAction{}, err
 	}
 
-	a, err := ar.get(gac.Action, logger)
+	a, aName, err := ar.get(gac.Action)
 	if err != nil {
 		return gestureAction{}, err
+	} else if logger != nil {
+		a = newLoggedAction(a, aName, logger)
 	}
 
 	return gestureAction{G: gm, A: a}, nil

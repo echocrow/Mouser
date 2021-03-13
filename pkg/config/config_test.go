@@ -9,27 +9,35 @@ import (
 
 var ds = config.DefaultSettings
 
+type Conf = config.Config
+
+type ARef = config.ActionRef
+type BasicA = config.BasicAction
+type AppBrA = config.AppBranchAction
+
+type Gests = config.GestureSeries
+
 func TestParseYAML(t *testing.T) {
 	tests := []struct {
 		name   string
 		yml    string
-		config config.Config
+		config Conf
 		wantOk bool
 	}{
 		{
 			"empty config",
 			``,
-			config.Config{Settings: ds},
+			Conf{Settings: ds},
 			true,
 		},
 		{
 			"simple mapping",
 			`
-mappings:
-  K1: fookey
-  K2: barkey
-`,
-			config.Config{
+      mappings:
+        K1: fookey
+        K2: barkey
+      `,
+			Conf{
 				Mappings: map[config.KeyAlias]config.MappingKey{
 					"K1": {Key: "fookey"},
 					"K2": {Key: "barkey"},
@@ -41,35 +49,29 @@ mappings:
 		{
 			"simple hotkeys",
 			`
-hotkeys:
-  K1:
-    foo_down: foo:action
-    bar_tap.bar_hold.bar_tap: bar:action
-  K2:
-    fizz_left: fizz:buzz
-`,
-			config.Config{
+      hotkeys:
+        K1:
+          foo_down: foo:action
+          bar_tap.bar_hold.bar_tap: bar:action
+        K2:
+          fizz_left: fizz:buzz
+      `,
+			Conf{
 				HotKeys: map[config.KeyAlias]config.GestureActions{
 					"K1": {
 						{
-							Gesture: config.GestureSeries{"foo_down"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "foo:action",
-							}},
+							Gesture: Gests{"foo_down"},
+							Action:  ARef{BasicA{Name: "foo:action"}},
 						},
 						{
-							Gesture: config.GestureSeries{"bar_tap", "bar_hold", "bar_tap"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "bar:action",
-							}},
+							Gesture: Gests{"bar_tap", "bar_hold", "bar_tap"},
+							Action:  ARef{BasicA{Name: "bar:action"}},
 						},
 					},
 					"K2": {
 						{
-							Gesture: config.GestureSeries{"fizz_left"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "fizz:buzz",
-							}},
+							Gesture: Gests{"fizz_left"},
+							Action:  ARef{BasicA{Name: "fizz:buzz"}},
 						},
 					},
 				},
@@ -78,40 +80,32 @@ hotkeys:
 			true,
 		},
 		{
-			"simple actions",
+			"app branch",
 			`
-actions:
-  foo:alias:0: bar:0
-  foo:alias:1: bar:1
-  foo:special:
-    type: app-branch
-    branches:
-      /App/Foo: foo:action
-      /App/Bar: null
-      /App/Baz: baz:action
-    fallback: fall:back:action
-`,
-			config.Config{
-				Actions: map[string]config.ActionRef{
-					"foo:alias:0": {config.BasicAction{
-						Name: "bar:0",
-					}},
-					"foo:alias:1": {config.BasicAction{
-						Name: "bar:1",
-					}},
-					"foo:special": {config.AppBranchAction{
-						Branches: map[string]config.ActionRef{
-							"/App/Foo": {config.BasicAction{
-								Name: "foo:action",
-							}},
+      actions:
+        foo:alias:0: bar:0
+        foo:alias:1: bar:1
+        foo:special:
+          type: app-branch
+          branches:
+            /App/Foo: foo:action
+            /App/Bar: null
+            /App/Baz:
+              type: action
+              action: baz:action
+          fallback: fall:back:action
+      `,
+			Conf{
+				Actions: map[string]ARef{
+					"foo:alias:0": {BasicA{Name: "bar:0"}},
+					"foo:alias:1": {BasicA{Name: "bar:1"}},
+					"foo:special": {AppBrA{
+						Branches: map[string]ARef{
+							"/App/Foo": {BasicA{Name: "foo:action"}},
 							"/App/Bar": {},
-							"/App/Baz": {config.BasicAction{
-								Name: "baz:action",
-							}},
+							"/App/Baz": {BasicA{Name: "baz:action"}},
 						},
-						Fallback: config.ActionRef{config.BasicAction{
-							Name: "fall:back:action",
-						}},
+						Fallback: ARef{BasicA{Name: "fall:back:action"}},
 					}},
 				},
 				Settings: ds,
@@ -121,14 +115,14 @@ actions:
 		{
 			"simple settings",
 			`
-settings:
-  debug: true
-  gestures:
-    cap: 42
-  swipes:
-    min-dist: 123
-`,
-			config.Config{
+      settings:
+        debug: true
+        gestures:
+          cap: 42
+        swipes:
+          min-dist: 123
+      `,
+			Conf{
 				Settings: config.Settings{
 					Debug: true,
 					Gestures: config.GestureSettings{
@@ -149,97 +143,97 @@ settings:
 		{
 			"complex config",
 			`
-mappings:
-  K1: fookey
-  K2: barkey
-  K3: {key: bazkey}
+      mappings:
+        K1: fookey
+        K2: barkey
+        K3: {key: bazkey}
 
-hotkeys:
-  K1:
-    foo_down: foo:action
-    bar_tap.bar_hold.bar_tap: bar:action
-  fizzkey:
-    fizz_left: fizz:buzz
-  K2:
-  K3:
-    -
-      gesture: bar0.bar1
-      action: bar:some:action
-    -
-      gesture: [bar2, bar3]
-      exact: true
-      action: bar:another:action
-  K9:
-    foo:
-      action: foo:action
-      somekey: ignore_me
-    bar:
-      type: action
-      action: bar:action
-    fizz.buzz:
-      action: fizz:buzz
-      args: [1, 2, fizz, 4, buzz]
-    baz:
-      type: app-branch
-      branches:
-        /Far.app: far:far
-      fallback: baz:baz
+      hotkeys:
+        K1:
+          foo_down: foo:action
+          bar_tap.bar_hold.bar_tap: bar:action
+        fizzkey:
+          fizz_left: fizz:buzz
+        K2:
+        K3:
+          -
+            gesture: bar0.bar1
+            action: bar:some:action
+          -
+            gesture: [bar2, bar3]
+            exact: true
+            action: bar:another:action
+        K9:
+          foo:
+            action: foo:action
+            somekey: ignore_me
+          bar:
+            type: action
+            action: bar:action
+          fizz.buzz:
+            action: fizz:buzz
+            args: [1, 2, fizz, 4, buzz]
+          baz:
+            type: app-branch
+            branches:
+              /Far.app: far:far
+            fallback: baz:baz
 
-actions:
-  foo:0: foo:0
-  foo:1: foo:1
-  foo:2:
-  foo:3:
-    action: bar:3
-  foo:4:
-    type: action
-    action: bar:4
-  foo:5:
-    action: bar:5
-    random_key: ignore
-  foo:6:
-    action: bar:6
-    args: [foo, 1, 2, bar, 3]
-  foo:7:
-    type: app-branch
-    branches:
-      /App/Foo: foo:action
-      /App/Bar: null
-      /App/Baz: baz:action
-    fallback: fall:back:action
-  foo:9000:
-    type: app-branch
-    branches:
-      Foo.app: foo:action
-      "": bar:action
-      Baz.app:
-        type: action
-        action: nested:action
-        args: [inception]
-      TooFar.app:
-        type: app-branch
-        branches:
-          Bar.Foo.app: far:action
-          Bar.Baz.app:
-            action: double:nested:action
-            args: [in, too, deep]
-        fallback: nested:fallback
-    fallback: null
+      actions:
+        foo:0: foo:0
+        foo:1: foo:1
+        foo:2:
+        foo:3:
+          action: bar:3
+        foo:4:
+          type: action
+          action: bar:4
+        foo:5:
+          action: bar:5
+          random_key: ignore
+        foo:6:
+          action: bar:6
+          args: [foo, 1, 2, bar, 3]
+        foo:7:
+          type: app-branch
+          branches:
+            /App/Foo: foo:action
+            /App/Bar: null
+            /App/Baz: baz:action
+          fallback: fall:back:action
+        foo:9000:
+          type: app-branch
+          branches:
+            Foo.app: foo:action
+            "": bar:action
+            Baz.app:
+              type: action
+              action: nested:action
+              args: [inception]
+            TooFar.app:
+              type: app-branch
+              branches:
+                Bar.Foo.app: far:action
+                Bar.Baz.app:
+                  action: double:nested:action
+                  args: [in, too, deep]
+              fallback: nested:fallback
+          fallback: null
 
-settings:
-  gestures:
-    ttl: 12
-    short-press-ttl: 34
-    cap: 56
-  swipes:
-    min-dist: 987
-    throttle: 654
-    poll-rate: 321
-  toggles:
-    init-delay: 111
-    repeat-delay: 222
-`,
-			config.Config{
+      settings:
+        gestures:
+          ttl: 12
+          short-press-ttl: 34
+          cap: 56
+        swipes:
+          min-dist: 987
+          throttle: 654
+          poll-rate: 321
+        toggles:
+          init-delay: 111
+          repeat-delay: 222
+      `,
+			Conf{
 				Mappings: map[config.KeyAlias]config.MappingKey{
 					"K1": {Key: "fookey"},
 					"K2": {Key: "barkey"},
@@ -248,140 +242,98 @@ settings:
 				HotKeys: map[config.KeyAlias]config.GestureActions{
 					"K1": {
 						{
-							Gesture: config.GestureSeries{"foo_down"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "foo:action",
-							}},
+							Gesture: Gests{"foo_down"},
+							Action:  ARef{BasicA{Name: "foo:action"}},
 						},
 						{
-							Gesture: config.GestureSeries{"bar_tap", "bar_hold", "bar_tap"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "bar:action",
-							}},
+							Gesture: Gests{"bar_tap", "bar_hold", "bar_tap"},
+							Action:  ARef{BasicA{Name: "bar:action"}},
 						},
 					},
 					"fizzkey": {
 						{
-							Gesture: config.GestureSeries{"fizz_left"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "fizz:buzz",
-							}},
+							Gesture: Gests{"fizz_left"},
+							Action:  ARef{BasicA{Name: "fizz:buzz"}},
 						},
 					},
 					"K2": nil,
 					"K3": {
 						{
-							Gesture: config.GestureSeries{"bar0", "bar1"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "bar:some:action",
-							}},
+							Gesture: Gests{"bar0", "bar1"},
+							Action:  ARef{BasicA{Name: "bar:some:action"}},
 						},
 						{
-							Gesture: config.GestureSeries{"bar2", "bar3"},
+							Gesture: Gests{"bar2", "bar3"},
 							Exact:   true,
-							Action: config.ActionRef{config.BasicAction{
-								Name: "bar:another:action",
-							}},
+							Action:  ARef{BasicA{Name: "bar:another:action"}},
 						},
 					},
 					"K9": {
 						{
-							Gesture: config.GestureSeries{"foo"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "foo:action",
-							}},
+							Gesture: Gests{"foo"},
+							Action:  ARef{BasicA{Name: "foo:action"}},
 						},
 						{
-							Gesture: config.GestureSeries{"bar"},
-							Action: config.ActionRef{config.BasicAction{
-								Name: "bar:action",
-							}},
+							Gesture: Gests{"bar"},
+							Action:  ARef{BasicA{Name: "bar:action"}},
 						},
 						{
-							Gesture: config.GestureSeries{"fizz", "buzz"},
-							Action: config.ActionRef{config.BasicAction{
+							Gesture: Gests{"fizz", "buzz"},
+							Action: ARef{BasicA{
 								Name: "fizz:buzz",
 								Args: []interface{}{1, 2, "fizz", 4, "buzz"},
 							}},
 						},
 						{
-							Gesture: config.GestureSeries{"baz"},
-							Action: config.ActionRef{config.AppBranchAction{
-								Branches: map[string]config.ActionRef{
-									"/Far.app": {config.BasicAction{
-										Name: "far:far",
-									}},
+							Gesture: Gests{"baz"},
+							Action: ARef{AppBrA{
+								Branches: map[string]ARef{
+									"/Far.app": {BasicA{Name: "far:far"}},
 								},
-								Fallback: config.ActionRef{config.BasicAction{
-									Name: "baz:baz",
-								}},
+								Fallback: ARef{BasicA{Name: "baz:baz"}},
 							}},
 						},
 					},
 				},
-				Actions: map[string]config.ActionRef{
-					"foo:0": {config.BasicAction{
-						Name: "foo:0",
-					}},
-					"foo:1": {config.BasicAction{
-						Name: "foo:1",
-					}},
+				Actions: map[string]ARef{
+					"foo:0": {BasicA{Name: "foo:0"}},
+					"foo:1": {BasicA{Name: "foo:1"}},
 					"foo:2": {},
-					"foo:3": {config.BasicAction{
-						Name: "bar:3",
-					}},
-					"foo:4": {config.BasicAction{
-						Name: "bar:4",
-					}},
-					"foo:5": {config.BasicAction{
-						Name: "bar:5",
-					}},
-					"foo:6": {config.BasicAction{
+					"foo:3": {BasicA{Name: "bar:3"}},
+					"foo:4": {BasicA{Name: "bar:4"}},
+					"foo:5": {BasicA{Name: "bar:5"}},
+					"foo:6": {BasicA{
 						Name: "bar:6",
 						Args: []interface{}{"foo", 1, 2, "bar", 3},
 					}},
-					"foo:7": {config.AppBranchAction{
-						Branches: map[string]config.ActionRef{
-							"/App/Foo": {config.BasicAction{
-								Name: "foo:action",
-							}},
+					"foo:7": {AppBrA{
+						Branches: map[string]ARef{
+							"/App/Foo": {BasicA{Name: "foo:action"}},
 							"/App/Bar": {},
-							"/App/Baz": {config.BasicAction{
-								Name: "baz:action",
-							}},
+							"/App/Baz": {BasicA{Name: "baz:action"}},
 						},
-						Fallback: config.ActionRef{config.BasicAction{
-							Name: "fall:back:action",
-						}},
+						Fallback: ARef{BasicA{Name: "fall:back:action"}},
 					}},
-					"foo:9000": {config.AppBranchAction{
-						Branches: map[string]config.ActionRef{
-							"Foo.app": {config.BasicAction{
-								Name: "foo:action",
-							}},
-							"": {config.BasicAction{
-								Name: "bar:action",
-							}},
-							"Baz.app": {config.BasicAction{
+					"foo:9000": {AppBrA{
+						Branches: map[string]ARef{
+							"Foo.app": {BasicA{Name: "foo:action"}},
+							"":        {BasicA{Name: "bar:action"}},
+							"Baz.app": {BasicA{
 								Name: "nested:action",
 								Args: []interface{}{"inception"},
 							}},
-							"TooFar.app": {config.AppBranchAction{
-								Branches: map[string]config.ActionRef{
-									"Bar.Foo.app": {config.BasicAction{
-										Name: "far:action",
-									}},
-									"Bar.Baz.app": {config.BasicAction{
+							"TooFar.app": {AppBrA{
+								Branches: map[string]ARef{
+									"Bar.Foo.app": {BasicA{Name: "far:action"}},
+									"Bar.Baz.app": {BasicA{
 										Name: "double:nested:action",
 										Args: []interface{}{"in", "too", "deep"},
 									}},
 								},
-								Fallback: config.ActionRef{config.BasicAction{
-									Name: "nested:fallback",
-								}},
+								Fallback: ARef{BasicA{Name: "nested:fallback"}},
 							}},
 						},
-						Fallback: config.ActionRef{},
+						Fallback: ARef{},
 					}},
 				},
 				Settings: config.Settings{
@@ -407,63 +359,63 @@ settings:
 		{
 			"empty gesture sequence 1",
 			`
-hotkeys:
-  K1:
-    "": foo:action
-`,
-			config.Config{},
+      hotkeys:
+        K1:
+          "": foo:action
+      `,
+			Conf{},
 			false,
 		},
 		{
 			"empty gesture sequence 2",
 			`
-hotkeys:
-  K1:
-    - gesture: []
-      action: foo:action
-`,
-			config.Config{},
+      hotkeys:
+        K1:
+          - gesture: []
+            action: foo:action
+      `,
+			Conf{},
 			false,
 		},
 		{
 			"empty gesture",
 			`
-hotkeys:
-  K1:
-    "foo.bar.": foo:action
-`,
-			config.Config{},
+      hotkeys:
+        K1:
+          "foo.bar.": foo:action
+      `,
+			Conf{},
 			false,
 		},
 		{
 			"invalid action name",
 			`
-actions:
-  foo:action: [123]
-`,
-			config.Config{},
+      actions:
+        foo:action: [123]
+      `,
+			Conf{},
 			false,
 		},
 		{
 			"invalid action type",
 			`
-actions:
-  foo:action:
-    type: invalid_type
-    action: bar:action
-`,
-			config.Config{},
+      actions:
+        foo:action:
+          type: invalid_type
+          action: bar:action
+      `,
+			Conf{},
 			false,
 		},
 		{
 			"invalid action args",
 			`
-actions:
-  foo:action:
-    action: bar:action
-    args: not_a_list
-`,
-			config.Config{},
+      actions:
+        foo:action:
+          action: bar:action
+          args: not_a_list
+      `,
+			Conf{},
 			false,
 		},
 	}

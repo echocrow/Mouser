@@ -38,8 +38,12 @@ func setGlobalMonitor(m *Monitor) error {
 	return nil
 }
 
+const appLoopQuitTimeout = time.Second
+
 // CEngine implements monitor engine via C.
 type CEngine struct {
+	loopC chan struct{}
+
 	handlerRefs [2]C.EventHandlerRef
 
 	mouseEventTap C.CFMachPortRef
@@ -54,6 +58,7 @@ func (e *CEngine) Init() (ok bool) {
 	if ok := e.initMouse(); !ok {
 		return false
 	}
+	e.loopC = make(chan struct{})
 	return true
 }
 
@@ -123,21 +128,36 @@ func (e *CEngine) initMouse() (ok bool) {
 }
 
 // Start starts the engine for monitoring.
-func (*CEngine) Start(m *Monitor) error {
+func (e *CEngine) Start(m *Monitor) error {
 	if err := setGlobalMonitor(m); err != nil {
 		return err
 	}
 
-	go C.RunApplicationEventLoop()
+	go e.runLoop()
 
 	return nil
 }
 
 // Stop stops the engine from monitoring.
-func (*CEngine) Stop() {
+func (e *CEngine) Stop() {
+	// QuitApplicationEventLoop() seems unstable, not always or constistantly
+	// terminating RunApplicationEventLoop(). However, calling QuitEventLoop()
+	// for the main event loop in addition seems to more reliably terminate the
+	// main app loop. Just in case this still fails, we ignore the failed
+	// termination after a timeout.
 	C.QuitApplicationEventLoop()
+	C.QuitEventLoop(C.GetMainEventLoop())
+	select {
+	case <-e.loopC:
+	case <-time.After(appLoopQuitTimeout):
+	}
 
 	setGlobalMonitor(nil)
+}
+
+func (e *CEngine) runLoop() {
+	C.RunApplicationEventLoop()
+	e.loopC <- struct{}{}
 }
 
 // Deinit deinitializes the engine for monitoring.
@@ -149,6 +169,7 @@ func (e *CEngine) Deinit() (ok bool) {
 	if ok := e.deinitMouse(); !ok {
 		ok = false
 	}
+	close(e.loopC)
 	return
 }
 

@@ -13,6 +13,7 @@ type Conf = config.Config
 
 type ARef = config.ActionRef
 type BasicA = config.BasicAction
+type ToggleA = config.ToggleAction
 type AppBrA = config.AppBranchAction
 
 type Gests = config.GestureSeries
@@ -74,6 +75,49 @@ func TestParseYAML(t *testing.T) {
 							Action:  ARef{BasicA{Name: "fizz:buzz"}},
 						},
 					},
+				},
+				Settings: ds,
+			},
+			true,
+		},
+		{
+			"custom toggles",
+			`
+      actions:
+        foo:0:toggle:
+          type: toggle
+          action: foo
+        foo:1:toggle:
+          type: toggle
+          action: timed-foo
+          init-delay: 123
+          repeat-delay: 456
+        fizz:buzz:toggle:
+          type: toggle
+          action:
+            action: fizz:buzz
+            args: [3, 5]
+      `,
+			Conf{
+				Actions: map[string]ARef{
+					"foo:0:toggle": {ToggleA{
+						Action:      ARef{BasicA{Name: "foo"}},
+						InitDelay:   ds.Toggles.InitDelay,
+						RepeatDelay: ds.Toggles.RepeatDelay,
+					}},
+					"foo:1:toggle": {ToggleA{
+						Action:      ARef{BasicA{Name: "timed-foo"}},
+						InitDelay:   123,
+						RepeatDelay: 456,
+					}},
+					"fizz:buzz:toggle": {ToggleA{
+						Action: ARef{BasicA{
+							Name: "fizz:buzz",
+							Args: []interface{}{3, 5},
+						}},
+						InitDelay:   ds.Toggles.InitDelay,
+						RepeatDelay: ds.Toggles.RepeatDelay,
+					}},
 				},
 				Settings: ds,
 			},

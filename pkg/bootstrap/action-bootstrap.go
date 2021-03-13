@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/birdkid/mouser/pkg/actions"
 	"github.com/birdkid/mouser/pkg/config"
@@ -11,8 +12,9 @@ import (
 )
 
 const (
-	toggleOnSuffix  = ":toggle:on"
-	toggleOffSuffix = ":toggle:off"
+	toggleSuffix    = ":toggle"
+	toggleOnSuffix  = toggleSuffix + ":on"
+	toggleOffSuffix = toggleSuffix + ":off"
 )
 
 type lazyAction struct {
@@ -112,22 +114,38 @@ func (ar actionsRepo) getToggleName(name string) string {
 		return ""
 	}
 }
-
 func (ar actionsRepo) resolveToggle(name string) error {
-	a, err := ar.resolveActionName(name, nil)
+	a, initDelay, repeatDelay, err := ar.resolveToggleBaseAction(name)
 	if err != nil {
 		return err
 	}
-	on, off := actions.NewToggle(
-		a,
-		ar.s.Toggles.InitDelay.Duration(),
-		ar.s.Toggles.RepeatDelay.Duration(),
-	)
+
+	on, off := actions.NewToggle(a, initDelay, repeatDelay)
 	onName := name + toggleOnSuffix
 	offName := name + toggleOffSuffix
 	ar.as[onName] = on
 	ar.as[offName] = off
 	return nil
+}
+func (ar actionsRepo) resolveToggleBaseAction(
+	name string,
+) (a actions.Action, initDelay, repeatDelay time.Duration, err error) {
+	toggleName := name + toggleSuffix
+	if la, ok := ar.r[toggleName]; ok {
+		aci := la.aRef.A
+		if ac, ok := aci.(config.ToggleAction); ok {
+			a, err = ar.getNested(ac.Action)
+			initDelay = ac.InitDelay.Duration()
+			repeatDelay = ac.RepeatDelay.Duration()
+		} else {
+			err = fmt.Errorf("invalid toggle base action type at \"%s\"", toggleName)
+		}
+	} else {
+		a, err = ar.resolveActionName(name, nil)
+		initDelay = ar.s.Toggles.InitDelay.Duration()
+		repeatDelay = ar.s.Toggles.RepeatDelay.Duration()
+	}
+	return
 }
 
 func (ar actionsRepo) resolveAppBranchAction(

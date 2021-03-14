@@ -69,13 +69,14 @@ func main() {
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigCh
-		err := stop()
-		if err != nil {
+		if err := stop(); err != nil {
 			abort(1, err)
 		}
 	}()
 
-	run()
+	if err := run(); err != nil {
+		abort(1, err)
+	}
 }
 
 func defaultConfigPath() (string, error) {

@@ -36,7 +36,7 @@ func New(actionName string, args ...interface{}) (Action, error) {
 }
 
 var basicActions = map[string]Action{
-	// vol:down decreased the audio volume level.
+	// vol:down decreases the audio volume level.
 	"vol:down": func() { robotgo.KeyTap("audio_vol_down") },
 	// vol:up increases the audio volume level.
 	"vol:up": func() { robotgo.KeyTap("audio_vol_up") },
@@ -47,7 +47,7 @@ var basicActions = map[string]Action{
 	"media:toggle": func() { robotgo.KeyTap("audio_play") },
 	// media:prev rewindes the current or jumps back to the previous media record.
 	"media:prev": func() { robotgo.KeyTap("audio_prev") },
-	// media:prev forwarsd to the next media record.
+	// media:prev forwards to the next media record.
 	"media:next": func() { robotgo.KeyTap("audio_next") },
 
 	// os:close-window closes the current window.

@@ -63,7 +63,7 @@ func (mk *MappingKey) UnmarshalYAML(node *yaml.Node) error {
 // Config contains a mouser runtime configuration.
 type Config struct {
 	Mappings Mapping
-	HotKeys  map[KeyAlias]GestureActions
+	Gestures map[KeyAlias]GestureActions
 	Actions  map[string]ActionRef
 	Settings Settings
 }

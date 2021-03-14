@@ -21,7 +21,7 @@ func Bootstrap(conf config.Config) (
 ) {
 	m := hotkeys.DefaultMonitor(conf.Settings.Debug)
 
-	hkGas, err := registerHotKeys(m, conf)
+	hkGas, err := registerGestures(m, conf)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -57,11 +57,11 @@ func makeKey(alias config.KeyAlias, mapping config.Mapping) hotkey.KeyName {
 	return hotkey.KeyName(alias)
 }
 
-func registerHotKeys(
+func registerGestures(
 	m *monitor.Monitor,
 	conf config.Config,
 ) (map[hotkey.ID][]gestureAction, error) {
-	if len(conf.HotKeys) == 0 {
+	if len(conf.Gestures) == 0 {
 		return nil, errors.New("no hotkeys specified")
 	}
 
@@ -72,8 +72,8 @@ func registerHotKeys(
 		actionLogger = log.New("Action")
 	}
 
-	hkGas := make(map[hotkey.ID][]gestureAction, len(conf.HotKeys))
-	for alias, gestActs := range conf.HotKeys {
+	hkGas := make(map[hotkey.ID][]gestureAction, len(conf.Gestures))
+	for alias, gestActs := range conf.Gestures {
 		key := makeKey(alias, conf.Mappings)
 		gas := make([]gestureAction, len(gestActs))
 

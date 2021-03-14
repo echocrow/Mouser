@@ -50,7 +50,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			"simple hotkeys",
 			`
-      hotkeys:
+      gestures:
         K1:
           foo_down: foo:action
           bar_tap.bar_hold.bar_tap: bar:action
@@ -58,7 +58,7 @@ func TestParseYAML(t *testing.T) {
           fizz_left: fizz:buzz
       `,
 			Conf{
-				HotKeys: map[config.KeyAlias]config.GestureActions{
+				Gestures: map[config.KeyAlias]config.GestureActions{
 					"K1": {
 						{
 							Gesture: Gests{"foo_down"},
@@ -192,7 +192,7 @@ func TestParseYAML(t *testing.T) {
         K2: barkey
         K3: {key: bazkey}
 
-      hotkeys:
+      gestures:
         K1:
           foo_down: foo:action
           bar_tap.bar_hold.bar_tap: bar:action
@@ -283,7 +283,7 @@ func TestParseYAML(t *testing.T) {
 					"K2": {Key: "barkey"},
 					"K3": {Key: "bazkey"},
 				},
-				HotKeys: map[config.KeyAlias]config.GestureActions{
+				Gestures: map[config.KeyAlias]config.GestureActions{
 					"K1": {
 						{
 							Gesture: Gests{"foo_down"},
@@ -403,7 +403,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			"empty gesture sequence 1",
 			`
-      hotkeys:
+      gestures:
         K1:
           "": foo:action
       `,
@@ -413,7 +413,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			"empty gesture sequence 2",
 			`
-      hotkeys:
+      gestures:
         K1:
           - gesture: []
             action: foo:action
@@ -424,7 +424,7 @@ func TestParseYAML(t *testing.T) {
 		{
 			"empty gesture",
 			`
-      hotkeys:
+      gestures:
         K1:
           "foo.bar.": foo:action
       `,

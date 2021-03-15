@@ -10,7 +10,7 @@ import (
 
 type i = interface{}
 
-func TestFromHotkeys(t *testing.T) {
+func TestNewAction(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string][]struct {

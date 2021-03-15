@@ -36,18 +36,21 @@ func TestNewAction(t *testing.T) {
 		"io:tap": {
 			{nil, false},
 			{[]i{}, false},
-			{[]i{0}, false},
+			{[]i{0}, true},
 			{[]i{"f1"}, true},
-			{[]i{"f1", 0}, false},
-			{[]i{"f1", "shift"}, true},
+			{[]i{"f1", 0}, true},
+			{[]i{"f1", []i{}}, false},
+			{[]i{[]i{"f1"}}, false},
+			{[]i{"shift", "f1"}, true},
 		},
 
 		"io:type": {
 			{nil, false},
 			{[]i{}, false},
-			{[]i{0}, false},
+			{[]i{0}, true},
 			{[]i{"foo"}, true},
 			{[]i{"foo", "bar"}, false},
+			{[]i{[]i{"foo"}}, false},
 		},
 
 		"io:scroll": {
@@ -67,19 +70,21 @@ func TestNewAction(t *testing.T) {
 		"os:open": {
 			{nil, false},
 			{[]i{}, false},
-			{[]i{1}, false},
+			{[]i{1}, true},
 			{[]i{"foo"}, true},
 			{[]i{"foo", "-v"}, true},
-			{[]i{"foo", 1}, false},
+			{[]i{"foo", 1}, true},
+			{[]i{"foo", []i{"-v"}}, false},
 		},
 
 		"os:cmd": {
 			{nil, false},
 			{[]i{}, false},
-			{[]i{1}, false},
+			{[]i{1}, true},
 			{[]i{"foo"}, true},
 			{[]i{"foo", "-v"}, true},
-			{[]i{"foo", 1}, false},
+			{[]i{"foo", 1}, true},
+			{[]i{"foo", []i{"-v"}}, false},
 		},
 
 		"misc:sleep": {
@@ -97,7 +102,7 @@ func TestNewAction(t *testing.T) {
 		actionName := actionName
 		for i, tc := range tcs {
 			tc := tc
-			t.Run(fmt.Sprintf("%s #%d", actionName, i), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s #%d", actionName, i+1), func(t *testing.T) {
 				t.Parallel()
 				got, err := actions.New(actionName, tc.args...)
 				if tc.wantOk {

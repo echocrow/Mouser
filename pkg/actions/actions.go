@@ -3,6 +3,7 @@ package actions
 
 import (
 	"errors"
+	"fmt"
 	"os/exec"
 	"time"
 
@@ -67,16 +68,12 @@ var actionCreators = map[string]ActionCreator{
 		l := len(args)
 		if l < 1 {
 			return nil, ErrInvalidActionArgs
-		} else if key, ok := args[l-1].(string); !ok {
+		} else if key, ok := stringifySingle(args[l-1]); !ok {
 			return nil, ErrInvalidActionArgs
 		} else {
-			modifiers := make([]string, l-1)
-			for i, arg := range args[:l-1] {
-				if mod, ok := arg.(string); ok {
-					modifiers[i] = mod
-				} else {
-					return nil, ErrInvalidActionArgs
-				}
+			modifiers, ok := stringify(args[:l-1])
+			if !ok {
+				return nil, ErrInvalidActionArgs
 			}
 			tap := func() { robotgo.KeyTap(key, destringify(modifiers)...) }
 			return tap, nil
@@ -88,7 +85,7 @@ var actionCreators = map[string]ActionCreator{
 	"io:type": func(args ...interface{}) (Action, error) {
 		if len(args) != 1 {
 			return nil, ErrInvalidActionArgs
-		} else if text, ok := args[0].(string); !ok {
+		} else if text, ok := stringifySingle(args[0]); !ok {
 			return nil, ErrInvalidActionArgs
 		} else {
 			write := func() { robotgo.TypeStr(text) }
@@ -119,7 +116,7 @@ var actionCreators = map[string]ActionCreator{
 	"os:open": func(args ...interface{}) (Action, error) {
 		if len(args) < 1 {
 			return nil, ErrInvalidActionArgs
-		} else if app, ok := args[0].(string); !ok {
+		} else if app, ok := stringifySingle(args[0]); !ok {
 			return nil, ErrInvalidActionArgs
 		} else {
 			openArgs, ok := stringify(args[1:])
@@ -144,7 +141,7 @@ var actionCreators = map[string]ActionCreator{
 	"os:cmd": func(args ...interface{}) (Action, error) {
 		if len(args) < 1 {
 			return nil, ErrInvalidActionArgs
-		} else if cmdName, ok := args[0].(string); !ok {
+		} else if cmdName, ok := stringifySingle(args[0]); !ok {
 			return nil, ErrInvalidActionArgs
 		} else {
 			cmdArgs, ok := stringify(args[1:])
@@ -191,13 +188,24 @@ var actionCreators = map[string]ActionCreator{
 func stringify(args []interface{}) ([]string, bool) {
 	strs := make([]string, len(args))
 	for i, arg := range args {
-		if str, ok := arg.(string); ok {
+		if str, ok := stringifySingle(arg); ok {
 			strs[i] = str
 		} else {
 			return nil, false
 		}
 	}
 	return strs, true
+}
+
+func stringifySingle(arg interface{}) (string, bool) {
+	switch str := arg.(type) {
+	case string:
+		return str, true
+	case int, uint, float64:
+		return fmt.Sprint(str), true
+	default:
+		return "", false
+	}
 }
 
 func destringify(strs []string) []interface{} {

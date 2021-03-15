@@ -42,6 +42,7 @@ func (ms Ms) Duration() time.Duration {
 
 // DefaultSettings contains all default settings.
 var DefaultSettings = Settings{
+	Debug: false,
 	Gestures: GestureSettings{
 		TTL:           500,
 		ShortPressTTL: 500,

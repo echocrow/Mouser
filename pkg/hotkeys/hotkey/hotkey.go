@@ -101,3 +101,29 @@ func (idc *IDCounter) NextID() ID {
 	idc.nid++
 	return id
 }
+
+// IDSet holds a unique, non-sorted set of hotkey IDs
+type IDSet struct {
+	m map[ID]struct{}
+}
+
+// NewIDSet instantiates a new IDSet.
+func NewIDSet() IDSet {
+	return IDSet{make(map[ID]struct{})}
+}
+
+// Add adds ID id to IDSet s.
+func (s IDSet) Add(id ID) {
+	s.m[id] = struct{}{}
+}
+
+// Has checks whether IDSet s contains ID id.
+func (s IDSet) Has(id ID) bool {
+	_, ok := s.m[id]
+	return ok
+}
+
+// Del removes ID id to IDSet s.
+func (s IDSet) Del(id ID) {
+	delete(s.m, id)
+}

@@ -138,3 +138,37 @@ func TestIDCounter(t *testing.T) {
 		assert.Equal(t, hkID(iterCount+1), idc.NextID())
 	})
 }
+
+func TestIIDSet(t *testing.T) {
+	s := hotkey.NewIDSet()
+	hkID1 := hkID(1)
+	hkID2 := hkID(2)
+	tests := []struct {
+		name string
+		adds []hkID
+		dels []hkID
+		has  [2]bool
+	}{
+		{"starts empty", []hkID{}, []hkID{}, [2]bool{false, false}},
+		{"adds #1", []hkID{hkID1}, []hkID{}, [2]bool{true, false}},
+		{"adds #2", []hkID{hkID2}, []hkID{}, [2]bool{true, true}},
+		{"deletes #1", []hkID{}, []hkID{hkID1}, [2]bool{false, true}},
+		{"double-adds", []hkID{hkID2}, []hkID{}, [2]bool{false, true}},
+		{"double-deletes", []hkID{}, []hkID{hkID1}, [2]bool{false, true}},
+		{"re-adds", []hkID{hkID1}, []hkID{}, [2]bool{true, true}},
+		{"deletes #2", []hkID{}, []hkID{hkID2}, [2]bool{true, false}},
+		{"re-deletes", []hkID{}, []hkID{hkID1}, [2]bool{false, false}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			for _, id := range tc.adds {
+				s.Add(id)
+			}
+			for _, id := range tc.dels {
+				s.Del(id)
+			}
+			assert.Equal(t, tc.has[0], s.Has(hkID1))
+			assert.Equal(t, tc.has[1], s.Has(hkID2))
+		})
+	}
+}

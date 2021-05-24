@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/actions"
-	"github.com/birdkid/mouser/pkg/config"
-	"github.com/birdkid/mouser/pkg/log"
+	"github.com/echocrow/Mouser/pkg/actions"
+	"github.com/echocrow/Mouser/pkg/config"
+	"github.com/echocrow/Mouser/pkg/log"
 )
 
 const (

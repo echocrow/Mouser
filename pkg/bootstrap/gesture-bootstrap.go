@@ -3,8 +3,8 @@ package bootstrap
 import (
 	"errors"
 
-	"github.com/birdkid/mouser/pkg/config"
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures"
+	"github.com/echocrow/Mouser/pkg/config"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures"
 )
 
 // gestureMatcher describes a gestures series validator.

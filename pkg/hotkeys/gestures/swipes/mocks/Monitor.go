@@ -5,7 +5,7 @@ package mocks
 import (
 	time "time"
 
-	swipes "github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
+	swipes "github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
 	mock "github.com/stretchr/testify/mock"
 )
 

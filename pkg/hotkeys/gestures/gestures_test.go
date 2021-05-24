@@ -5,11 +5,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures"
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
-	swpMocks "github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes/mocks"
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
+	swpMocks "github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes/mocks"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

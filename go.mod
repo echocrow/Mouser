@@ -1,4 +1,4 @@
-module github.com/birdkid/mouser
+module github.com/echocrow/Mouser
 
 go 1.16
 

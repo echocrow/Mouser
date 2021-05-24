@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
 	"github.com/stretchr/testify/assert"
 )
 

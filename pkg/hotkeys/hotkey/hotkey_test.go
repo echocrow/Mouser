@@ -6,8 +6,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey/mocks"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

@@ -4,9 +4,9 @@ package gestures
 import (
 	"time"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor"
 )
 
 // Gesture identifies the type of gesture.

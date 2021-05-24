@@ -3,8 +3,8 @@
 package mocks
 
 import (
-	swipes "github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
-	vec "github.com/birdkid/mouser/pkg/vec"
+	swipes "github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
+	vec "github.com/echocrow/Mouser/pkg/vec"
 	mock "github.com/stretchr/testify/mock"
 )
 

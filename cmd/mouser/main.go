@@ -9,9 +9,9 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/birdkid/mouser/pkg/bootstrap"
-	"github.com/birdkid/mouser/pkg/config"
-	"github.com/birdkid/mouser/pkg/log"
+	"github.com/echocrow/Mouser/pkg/bootstrap"
+	"github.com/echocrow/Mouser/pkg/config"
+	"github.com/echocrow/Mouser/pkg/log"
 )
 
 // version is the version of this app set at build-time.

@@ -4,13 +4,13 @@ package bootstrap
 import (
 	"errors"
 
-	"github.com/birdkid/mouser/pkg/config"
-	"github.com/birdkid/mouser/pkg/hotkeys"
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures"
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
-	"github.com/birdkid/mouser/pkg/log"
+	"github.com/echocrow/Mouser/pkg/config"
+	"github.com/echocrow/Mouser/pkg/hotkeys"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor"
+	"github.com/echocrow/Mouser/pkg/log"
 )
 
 // Bootstrap kickstarts mouser.

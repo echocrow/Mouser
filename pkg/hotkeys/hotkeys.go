@@ -6,9 +6,9 @@ package hotkeys
 import (
 	"sync"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
-	"github.com/birdkid/mouser/pkg/log"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor"
+	"github.com/echocrow/Mouser/pkg/log"
 )
 
 var (

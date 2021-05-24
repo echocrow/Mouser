@@ -5,7 +5,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/birdkid/mouser/pkg/vec"
+	"github.com/echocrow/Mouser/pkg/vec"
 	"github.com/stretchr/testify/assert"
 )
 

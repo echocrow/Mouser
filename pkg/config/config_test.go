@@ -3,7 +3,7 @@ package config_test
 import (
 	"testing"
 
-	"github.com/birdkid/mouser/pkg/config"
+	"github.com/echocrow/Mouser/pkg/config"
 	"github.com/stretchr/testify/assert"
 )
 

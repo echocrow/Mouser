@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor"
-	"github.com/birdkid/mouser/pkg/hotkeys/monitor/mocks"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor"
+	"github.com/echocrow/Mouser/pkg/hotkeys/monitor/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

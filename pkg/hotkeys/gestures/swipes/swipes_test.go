@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes"
-	"github.com/birdkid/mouser/pkg/hotkeys/gestures/swipes/mocks"
-	"github.com/birdkid/mouser/pkg/vec"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes"
+	"github.com/echocrow/Mouser/pkg/hotkeys/gestures/swipes/mocks"
+	"github.com/echocrow/Mouser/pkg/vec"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )

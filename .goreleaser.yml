@@ -21,7 +21,7 @@ archives:
 brews:
   - ids: [darwin-build]
     tap:
-      owner: birdkid
+      owner: echocrow
       name: homebrew-tap
     folder: Formula
 

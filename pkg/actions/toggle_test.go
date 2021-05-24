@@ -4,7 +4,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/birdkid/mouser/pkg/actions"
+	"github.com/echocrow/Mouser/pkg/actions"
 	"github.com/stretchr/testify/assert"
 )
 

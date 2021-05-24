@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/hotkeys/hotkey"
-	"github.com/birdkid/mouser/pkg/log"
+	"github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
+	"github.com/echocrow/Mouser/pkg/log"
 )
 
 // Monitor errors raised by package monitor.

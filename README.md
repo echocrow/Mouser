@@ -32,15 +32,15 @@ Mouser currently supports macOS only. See [Development](#development) if you'd l
 
 Below you'll find the recommended ways to install Mouser.
 
-Alternatively, you can download Mouser from the [Releases](https://github.com/birdkid/Mouser/releases) page, or refer to [Development](#development) to build it yourself.
+Alternatively, you can download Mouser from the [Releases](https://github.com/echocrow/Mouser/releases) page, or refer to [Development](#development) to build it yourself.
 
 ### macOS
 Via [Homebrew](https://brew.sh/):
 ```sh
 # Install:
-brew install birdkid/tap/mouser
+brew install echocrow/tap/mouser
 # Update:
-brew upgrade birdkid/tap/mouser
+brew upgrade echocrow/tap/mouser
 # Auto-start:
 brew services start mouser
 ```

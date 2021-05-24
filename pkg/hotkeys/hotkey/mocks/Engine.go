@@ -3,7 +3,7 @@
 package mocks
 
 import (
-	hotkey "github.com/birdkid/mouser/pkg/hotkeys/hotkey"
+	hotkey "github.com/echocrow/Mouser/pkg/hotkeys/hotkey"
 	mock "github.com/stretchr/testify/mock"
 )
 

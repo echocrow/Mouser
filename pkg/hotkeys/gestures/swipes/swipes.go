@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/birdkid/mouser/pkg/vec"
+	"github.com/echocrow/Mouser/pkg/vec"
 	"github.com/go-vgo/robotgo"
 )
 

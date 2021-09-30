@@ -44,17 +44,18 @@ type Mapping map[KeyAlias]MappingKey
 
 // UnmarshalYAML decodes a MappingKey YAML node.
 func (mk *MappingKey) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
+	switch node.Kind {
+	case yaml.ScalarNode:
 		if err := node.Decode(&mk.Key); err != nil {
 			return err
 		}
-	} else if node.Kind == yaml.MappingNode {
+	case yaml.MappingNode:
 		var m mappingKey
 		if err := node.Decode(&m); err != nil {
 			return err
 		}
 		*mk = MappingKey(m)
-	} else {
+	default:
 		return newYAMLConfigError(node, "mapping key must be a string or dictionary")
 	}
 	return nil

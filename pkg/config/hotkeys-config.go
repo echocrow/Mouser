@@ -17,20 +17,21 @@ type GestureSeries []string
 
 // UnmarshalYAML decodes a GestureSeries YAML node.
 func (gs *GestureSeries) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
+	switch node.Kind {
+	case yaml.ScalarNode:
 		var gsStr string
 		if err := node.Decode(&gsStr); err != nil {
 			return err
 		}
 		gsSeq := decodeGestureSeriesStr(gsStr)
 		*gs = gsSeq
-	} else if node.Kind == yaml.SequenceNode {
+	case yaml.SequenceNode:
 		var gsSeq []string
 		if err := node.Decode(&gsSeq); err != nil {
 			return err
 		}
 		*gs = gsSeq
-	} else {
+	default:
 		return newYAMLConfigError(node, "gesture sequence must be a string or list")
 	}
 	if len(*gs) == 0 {
@@ -56,13 +57,14 @@ type GestureActions []GestureAction
 
 // UnmarshalYAML decodes a GestureActions YAML node.
 func (gas *GestureActions) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.SequenceNode {
+	switch node.Kind {
+	case yaml.SequenceNode:
 		var gasSlice []GestureAction
 		if err := node.Decode(&gasSlice); err != nil {
 			return err
 		}
 		*gas = gasSlice
-	} else if node.Kind == yaml.MappingNode {
+	case yaml.MappingNode:
 		*gas = make(GestureActions, len(node.Content)/2)
 		for i := range *gas {
 			k := i * 2
@@ -82,7 +84,7 @@ func (gas *GestureActions) UnmarshalYAML(node *yaml.Node) error {
 
 			(*gas)[i] = GestureAction{Gesture: gs, Action: a}
 		}
-	} else {
+	default:
 		return newYAMLConfigError(node, "hotkey must be a dictionary or list")
 	}
 	return nil

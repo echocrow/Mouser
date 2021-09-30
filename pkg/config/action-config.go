@@ -51,13 +51,14 @@ type ActionRef struct {
 
 // UnmarshalYAML decodes an ActionRef YAML node.
 func (ref *ActionRef) UnmarshalYAML(node *yaml.Node) error {
-	if node.Kind == yaml.ScalarNode {
+	switch node.Kind {
+	case yaml.ScalarNode:
 		var actionName string
 		if err := node.Decode(&actionName); err != nil {
 			return err
 		}
 		ref.A = BasicAction{Name: actionName}
-	} else if node.Kind == yaml.MappingNode {
+	case yaml.MappingNode:
 		var actionType string
 		var err error
 		if actionType, err = getActionNodeType(node); err != nil {
@@ -82,7 +83,7 @@ func (ref *ActionRef) UnmarshalYAML(node *yaml.Node) error {
 		if err != nil {
 			return err
 		}
-	} else {
+	default:
 		return newYAMLConfigError(node, "action must be a string or dictionary")
 	}
 	return nil

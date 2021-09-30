@@ -85,11 +85,11 @@ func main() {
 }
 
 func defaultConfigPath() (string, error) {
-	homeDir, err := os.UserHomeDir()
+	userCfgDir, err := os.UserConfigDir()
 	if err != nil {
 		return "", err
 	}
-	confPath := filepath.Join(homeDir, ".config", "mouser", "config.yml")
+	confPath := filepath.Join(userCfgDir, "mouser", "config.yml")
 	return confPath, nil
 }
 

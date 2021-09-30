@@ -31,7 +31,7 @@ brews:
 
     caveats: |
       To configure and run mouser, create and edit the config file:
-        mkdir -p ~/.config/mouser && touch ~/.config/mouser/config.yml
+        mkdir -p "$(dirname "$(./mouser --config '?')")" && touch "$(./mouser --config '?')" && echo $_
 
       For examples on how to configure mouser, refer to the homepage:
         #{homepage}

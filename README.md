@@ -50,12 +50,14 @@ brew services start mouser
 
 Mouser uses a YAML file for its configuration.
 
-Default config file paths:
-- **macOS:** `~/.config/mouser/config.yml`
+To get the default path to the config, run:
+```sh
+./mouser --config ?
+```
 
 Alternatively, you can specify a custom path:
 ```sh
-mouser --config path/to/config/file.yml
+mouser --config /path/to/config/file.yml
 ```
 
 The configuration file consists of these sections:

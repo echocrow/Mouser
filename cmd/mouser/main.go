@@ -37,11 +37,16 @@ func main() {
 		exitMessage(0, fmt.Sprint("mouser ", version))
 	}
 
-	if confPath == "" {
+	getConfPath := confPath == "?"
+	if confPath == "" || getConfPath {
 		if defConfPathErr != nil {
 			abort(2, defConfPathErr)
 		}
 		confPath = defConfPath
+	}
+	if getConfPath {
+		fmt.Println(confPath)
+		os.Exit(0)
 	}
 
 	var logger log.Logger

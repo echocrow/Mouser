@@ -12,12 +12,12 @@ import (
 // NewRequireApp creates an app-dependent action branch.
 func NewRequireApp(
 	app string,
-	action Action,
+	do Action,
 	fallback Action,
 ) Action {
 	return NewRequireAppCustom(
 		newAppRunningChecker(app).run,
-		action,
+		do,
 		fallback,
 	)
 }
@@ -26,12 +26,12 @@ func NewRequireApp(
 // app-detection callback.
 func NewRequireAppCustom(
 	checkAppRunning func() bool,
-	action Action,
+	do Action,
 	fallback Action,
 ) Action {
 	return func() {
-		isRun := checkAppRunning()
-		if !isRun {
+		action := do
+		if !checkAppRunning() {
 			action = fallback
 		}
 		if action != nil {
@@ -55,7 +55,6 @@ func newAppRunningChecker(app string) *appRunningChecker {
 }
 
 func (arc *appRunningChecker) checkCache() bool {
-	// Check cache.
 	arc.mx.RLock()
 	defer arc.mx.RUnlock()
 	if arc.pid != 0 {

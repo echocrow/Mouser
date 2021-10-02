@@ -57,20 +57,30 @@ func TestNewAppBranchCustom(t *testing.T) {
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
-			assertNoCall(t, calls, "premature")
-
 			setApp(tc.app)
-			branchAction()
-
-			if tc.wantOk {
-				assertCall(t, calls, tc.wantCall)
-			} else {
-				assertNoCall(t, calls, "nil")
-			}
-
-			assertNoCall(t, calls, "subsequent")
+			assertActionCalls(t, branchAction, tc.wantOk, tc.wantCall, calls)
 		})
 	}
+}
+
+func assertActionCalls(
+	t *testing.T,
+	action actions.Action,
+	wantOk bool,
+	wantCall string,
+	calls <-chan string,
+) {
+	assertNoCall(t, calls, "premature")
+
+	action()
+
+	if wantOk {
+		assertCall(t, calls, wantCall)
+	} else {
+		assertNoCall(t, calls, "nil")
+	}
+
+	assertNoCall(t, calls, "subsequent")
 }
 
 func assertCall(

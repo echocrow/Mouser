@@ -2,7 +2,6 @@ package actions
 
 import (
 	"os"
-	"strings"
 
 	"github.com/go-vgo/robotgo"
 )
@@ -50,7 +49,7 @@ func getAppMatch(
 	if app != "" {
 		pathSep := string(pathSeparator)
 		for appPrefix := range branches {
-			if appPrefix != "" && strings.HasPrefix(app, appPrefix+pathSep) {
+			if matchAppPathPrefix(app, appPrefix, pathSep) {
 				// Remember action assocaition for next time.
 				action := branches[appPrefix]
 				branches[app] = action
@@ -67,9 +66,5 @@ func getAppRobotgo() string {
 	if pid == 0 {
 		return ""
 	}
-	appPath, err := robotgo.FindPath(pid)
-	if err != nil {
-		return ""
-	}
-	return appPath
+	return getPidPath(pid)
 }

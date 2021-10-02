@@ -63,8 +63,7 @@ func TestNewAppBranchCustom(t *testing.T) {
 			branchAction()
 
 			if tc.wantOk {
-				gotCall := <-calls
-				assert.Equal(t, tc.wantCall, gotCall)
+				assertCall(t, calls, tc.wantCall)
 			} else {
 				assertNoCall(t, calls, "nil")
 			}
@@ -74,10 +73,23 @@ func TestNewAppBranchCustom(t *testing.T) {
 	}
 }
 
+func assertCall(
+	t *testing.T,
+	calls <-chan string,
+	wantCall string,
+) {
+	select {
+	case call := <-calls:
+		assert.Equal(t, wantCall, call)
+	default:
+		t.Errorf("Want branch action call \"%s\", got no call.", wantCall)
+	}
+}
+
 func assertNoCall(t *testing.T, calls <-chan string, callDesc string) {
 	select {
 	case call := <-calls:
-		t.Errorf("Do not want any %s branch action calls, got %s.", callDesc, call)
+		t.Errorf("Do not want any %s branch action calls, got \"%s\".", callDesc, call)
 	default:
 	}
 }

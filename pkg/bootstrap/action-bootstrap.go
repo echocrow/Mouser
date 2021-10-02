@@ -60,6 +60,9 @@ func (ar actionsRepo) get(
 	case config.AppBranchAction:
 		a, err = ar.resolveAppBranchAction(ac)
 		name = "(app-branch)"
+	case config.RequireAppAction:
+		a, err = ar.resolveRequireAppAction(ac)
+		name = "(require-app)"
 	case nil:
 		return nil, "(empty-action)", nil
 	default:
@@ -166,6 +169,23 @@ func (ar actionsRepo) resolveAppBranchAction(
 	}
 
 	a := actions.NewAppBranch(branches, fallback)
+	return a, nil
+}
+
+func (ar actionsRepo) resolveRequireAppAction(
+	ac config.RequireAppAction,
+) (actions.Action, error) {
+	do, err := ar.getNested(ac.Do)
+	if err != nil {
+		return nil, err
+	}
+
+	fallback, err := ar.getNested(ac.Fallback)
+	if err != nil {
+		return nil, err
+	}
+
+	a := actions.NewRequireApp(ac.App, do, fallback)
 	return a, nil
 }
 

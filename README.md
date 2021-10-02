@@ -26,6 +26,7 @@ Mouser currently supports macOS only. See [Development](#development) if you'd l
 - **Basic Actions:** control volume, media playback, trigger shortcuts, type text, run commands, etc.
 - **Toggle Actions:** repeat actions until stopped (e.g. repeat action while key is pressed)
 - **App-Specific Actions:** trigger a different action based on the current app
+- **App-Dependent Action:** trigger an action based on whether a given app is running (including background processes)
 
 
 ## Installation
@@ -116,10 +117,9 @@ gestures:
     swipe_left: media:prev
     swipe_right: media:next
     swipe_up: mac:open-media-player
-    tap.tap: media:toggle
-    hold: media:toggle
+    tap: mac:smart-media-toggle
   CLOSE:
-    tap: mac:smart-close-window
+    tap.tap: mac:smart-close-window
     hold: mac:quit-app
 
 actions:
@@ -152,6 +152,12 @@ actions:
   mac:open-media-player:
     action: os:open
     args: [/Applications/Spotify.app]
+
+  mac:smart-media-toggle:
+    type: require-app
+    app: /Applications/Spotify.app
+    do: media:toggle
+    fallback: mac:open-media-player
 
   mac:smart-close-window:
     type: app-branch
@@ -252,7 +258,7 @@ actions:
     init-delay: 50
     repeat-delay: 0
 
-  # App-specific actions.
+  # App-specific actions (based on foreground app).
   my-app-actions:
     type: app-branch
     branches:
@@ -260,6 +266,13 @@ actions:
       /Applications/MyApp2.app:
         action: some-app2-action
         args: [foo, bar]
+    fallback: some-fallback-action
+
+  # App-dependent action (based whether app is running).
+  my-app-actions:
+    type: require-app
+    app: /Applications/MyBackgroundApp.app
+    do: some-bg-app-action
     fallback: some-fallback-action
 ```
 </details>

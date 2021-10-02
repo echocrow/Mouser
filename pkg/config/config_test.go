@@ -15,6 +15,7 @@ type ARef = config.ActionRef
 type BasicA = config.BasicAction
 type ToggleA = config.ToggleAction
 type AppBrA = config.AppBranchAction
+type ReqAppA = config.RequireAppAction
 
 type Gests = config.GestureSeries
 
@@ -127,8 +128,6 @@ func TestParseYAML(t *testing.T) {
 			"app branch",
 			`
       actions:
-        foo:alias:0: bar:0
-        foo:alias:1: bar:1
         foo:special:
           type: app-branch
           branches:
@@ -141,14 +140,34 @@ func TestParseYAML(t *testing.T) {
       `,
 			Conf{
 				Actions: map[string]ARef{
-					"foo:alias:0": {BasicA{Name: "bar:0"}},
-					"foo:alias:1": {BasicA{Name: "bar:1"}},
 					"foo:special": {AppBrA{
 						Branches: map[string]ARef{
 							"/App/Foo": {BasicA{Name: "foo:action"}},
 							"/App/Bar": {},
 							"/App/Baz": {BasicA{Name: "baz:action"}},
 						},
+						Fallback: ARef{BasicA{Name: "fall:back:action"}},
+					}},
+				},
+				Settings: ds,
+			},
+			true,
+		},
+		{
+			"require app",
+			`
+      actions:
+        foo:require-app:
+          type: require-app
+          app: /App/Foo
+          do: foo:action
+          fallback: fall:back:action
+      `,
+			Conf{
+				Actions: map[string]ARef{
+					"foo:require-app": {ReqAppA{
+						App:      "/App/Foo",
+						Do:       ARef{BasicA{Name: "foo:action"}},
 						Fallback: ARef{BasicA{Name: "fall:back:action"}},
 					}},
 				},
@@ -245,6 +264,14 @@ func TestParseYAML(t *testing.T) {
             /App/Bar: null
             /App/Baz: baz:action
           fallback: fall:back:action
+        foo:8:
+          type: require-app
+          app: Foo.app
+          do:
+            action: bar:8
+          fallback:
+            action: bar:8:fallback
+            args: [foo, 1, 2, bar, 3]
         foo:9000:
           type: app-branch
           branches:
@@ -357,6 +384,14 @@ func TestParseYAML(t *testing.T) {
 							"/App/Baz": {BasicA{Name: "baz:action"}},
 						},
 						Fallback: ARef{BasicA{Name: "fall:back:action"}},
+					}},
+					"foo:8": {ReqAppA{
+						App: "Foo.app",
+						Do:  ARef{BasicA{Name: "bar:8"}},
+						Fallback: ARef{BasicA{
+							Name: "bar:8:fallback",
+							Args: []interface{}{"foo", 1, 2, "bar", 3},
+						}},
 					}},
 					"foo:9000": {AppBrA{
 						Branches: map[string]ARef{

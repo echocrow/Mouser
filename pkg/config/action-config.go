@@ -32,6 +32,13 @@ type AppBranchAction struct {
 	Fallback ActionRef
 }
 
+// RequireAppAction is a running-app-dependent action.
+type RequireAppAction struct {
+	App      string
+	Do       ActionRef
+	Fallback ActionRef
+}
+
 func getActionNodeType(node *yaml.Node) (string, error) {
 	if typeNode, err := findChildNode(node, "type"); err != nil {
 		return "", err
@@ -75,6 +82,10 @@ func (ref *ActionRef) UnmarshalYAML(node *yaml.Node) error {
 			ref.A = a
 		case "app-branch":
 			a := AppBranchAction{}
+			err = node.Decode(&a)
+			ref.A = a
+		case "require-app":
+			a := RequireAppAction{}
 			err = node.Decode(&a)
 			ref.A = a
 		default:

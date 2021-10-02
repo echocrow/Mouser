@@ -9,7 +9,7 @@ import (
 
 type act = actions.Action
 
-func TestCreateAppBranchCustom(t *testing.T) {
+func TestNewAppBranchCustom(t *testing.T) {
 	const (
 		app1     = "app_1"
 		app2     = "app_2"

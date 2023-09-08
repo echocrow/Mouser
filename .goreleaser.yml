@@ -33,9 +33,9 @@ brews:
       Once granted, restart mouser.
 
     service: |
-      run [opt_bin/"mouser"]
+      run opt_bin/"mouser"
       run_at_load true
-      keep_alive crashed: true
+      keep_alive successful_exit: false
 
     test: |
       system "#{bin}/mouser --version"

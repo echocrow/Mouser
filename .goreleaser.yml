@@ -5,22 +5,13 @@ before:
     - go mod tidy
 
 builds:
-  - id: darwin-build
-    main: ./cmd/mouser
+  - main: ./cmd/mouser
     env: [CGO_ENABLED=1]
     goos: [darwin]
     goarch: [amd64]
 
-archives:
-  - id: darwin-build
-    builds: [darwin-build]
-    replacements:
-      darwin: Darwin
-      amd64: x86_64
-
 brews:
-  - ids: [darwin-build]
-    tap:
+  - repository:
       owner: echocrow
       name: homebrew-tap
     folder: Formula
@@ -41,26 +32,10 @@ brews:
         System Perferences > Security & Privacy > Privacy > Accessibility > mouser
       Once granted, restart mouser.
 
-    plist: |
-      <?xml version="1.0" encoding="UTF-8"?>
-      <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-      <plist version="1.0">
-      <dict>
-        <key>Label</key>
-        <string>#{plist_name}</string>
-        <key>ProgramArguments</key>
-        <array>
-          <string>#{bin}/mouser</string>
-        </array>
-        <key>RunAtLoad</key>
-        <true />
-        <key>KeepAlive</key>
-        <dict>
-          <key>SuccessfulExit</key>
-          <false/>
-        </dict>
-      </dict>
-      </plist>
+    service: |
+      run [opt_bin/"mouser"]
+      run_at_load true
+      keep_alive crashed: true
 
     test: |
-      system "#{bin}/mouser", "--version"
+      system "#{bin}/mouser --version"

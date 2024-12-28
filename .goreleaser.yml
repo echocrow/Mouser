@@ -8,7 +8,6 @@ builds:
   - main: ./cmd/mouser
     env: [CGO_ENABLED=1]
     goos: [darwin]
-    goarch: [amd64]
 
 brews:
   - repository:

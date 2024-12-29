@@ -1,19 +1,23 @@
 project_name: mouser
 
+version: 2
+
 before:
   hooks:
     - go mod tidy
 
 builds:
   - main: ./cmd/mouser
-    env: [CGO_ENABLED=1]
-    goos: [darwin]
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
 
 brews:
   - repository:
       owner: echocrow
       name: homebrew-tap
-    folder: Formula
+    directory: Formula
 
     homepage: '{{ replace .GitURL ".git" "" }}'
     description: Automate actions via mouse gestures.

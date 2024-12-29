@@ -2,8 +2,6 @@ package actions
 
 import (
 	"os"
-
-	"github.com/go-vgo/robotgo"
 )
 
 // NewAppBranch creates an app-based actions branch.
@@ -62,7 +60,7 @@ func getAppMatch(
 }
 
 func getAppRobotgo() string {
-	pid := robotgo.GetPID()
+	pid := int32(os.Getpid())
 	if pid == 0 {
 		return ""
 	}

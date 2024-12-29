@@ -20,4 +20,4 @@ test:
 
 .PHONY: build
 build:
-	@goreleaser --snapshot --skip-publish --clean
+	@goreleaser --snapshot --clean

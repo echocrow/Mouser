@@ -2,6 +2,8 @@ package actions
 
 import (
 	"os"
+
+	"github.com/go-vgo/robotgo"
 )
 
 // NewAppBranch creates an app-based actions branch.
@@ -12,7 +14,7 @@ func NewAppBranch(
 	return NewAppBranchCustom(
 		branches,
 		fallback,
-		getAppRobotgo,
+		getForegroundAppPath,
 		os.PathSeparator,
 	)
 }
@@ -59,8 +61,8 @@ func getAppMatch(
 	return fallback
 }
 
-func getAppRobotgo() string {
-	pid := int32(os.Getpid())
+func getForegroundAppPath() string {
+	pid := int32(robotgo.GetPid())
 	if pid == 0 {
 		return ""
 	}

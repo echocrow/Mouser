@@ -5,8 +5,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/echocrow/pidpath"
-	gops "github.com/mitchellh/go-ps"
+	"github.com/shirou/gopsutil/v4/process"
 )
 
 // NewRequireApp creates an app-dependent action branch.
@@ -73,16 +72,14 @@ func (arc *appRunningChecker) run() bool {
 		return true
 	}
 
-	// Scan PIDs.
-	pss, err := gops.Processes()
-	if err != nil {
-		return false
-	}
+	// Scan processes.
+	ps, _ := process.Processes()
 	// We presume on average user-related apps are closer to the end than to the
 	// start of the list of processes, thus we loop through in reverse.
-	for i := len(pss) - 1; i >= 0; i-- {
-		pid := int32(pss[i].Pid())
-		path := getPidPath(pid)
+	for i := len(ps) - 1; i >= 0; i-- {
+		p := ps[i]
+		pid := p.Pid
+		path := getProcessPath(p)
 		if matchAppPathPrefix(path, arc.app, osPathSep) {
 			arc.mx.Lock()
 			defer arc.mx.Unlock()
@@ -95,7 +92,12 @@ func (arc *appRunningChecker) run() bool {
 }
 
 func getPidPath(pid int32) string {
-	path, _ := pidpath.Get(pid)
+	p, _ := process.NewProcess(pid)
+	return getProcessPath(p)
+}
+
+func getProcessPath(p *process.Process) string {
+	path, _ := p.Exe()
 	return path
 }
 

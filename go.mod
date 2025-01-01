@@ -3,9 +3,8 @@ module github.com/echocrow/Mouser
 go 1.23
 
 require (
-	github.com/echocrow/pidpath v0.2.1
 	github.com/go-vgo/robotgo v0.110.5
-	github.com/mitchellh/go-ps v1.0.0
+	github.com/shirou/gopsutil/v4 v4.24.12
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -27,8 +26,6 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/robotn/xgb v0.10.0 // indirect
 	github.com/robotn/xgbutil v0.10.0 // indirect
-	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/shirou/gopsutil/v4 v4.24.11 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tailscale/win v0.0.0-20241018163102-cfd3289ef17f // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect

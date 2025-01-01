@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -15,6 +16,14 @@ const (
 	toggleSuffix    = ":toggle"
 	toggleOnSuffix  = toggleSuffix + ":on"
 	toggleOffSuffix = toggleSuffix + ":off"
+)
+
+const (
+	userHomeDirAlias = "~" + string(os.PathSeparator)
+)
+
+var (
+	userHomeDir, _ = os.UserHomeDir()
 )
 
 type lazyAction struct {
@@ -78,7 +87,7 @@ func (ar actionsRepo) getNested(aRef config.ActionRef) (actions.Action, error) {
 
 func (ar actionsRepo) resolveActionName(
 	name string,
-	args []interface{},
+	rawArgs []interface{},
 ) (actions.Action, error) {
 	if a, ok := ar.as[name]; ok {
 		return a, nil
@@ -103,6 +112,15 @@ func (ar actionsRepo) resolveActionName(
 			return nil, err
 		}
 		return ar.as[name], nil
+	}
+
+	// Expand path arguments.
+	args := make([]interface{}, len(rawArgs))
+	copy(args, rawArgs)
+	for i, arg := range rawArgs {
+		if arg, ok := arg.(string); ok {
+			args[i] = expandPath(arg)
+		}
 	}
 
 	return actions.New(name, args...)
@@ -160,6 +178,7 @@ func (ar actionsRepo) resolveAppBranchAction(
 		if err != nil {
 			return nil, err
 		}
+		app = expandPath(app)
 		branches[app] = a
 	}
 
@@ -185,7 +204,7 @@ func (ar actionsRepo) resolveRequireAppAction(
 		return nil, err
 	}
 
-	a := actions.NewRequireApp(ac.App, do, fallback)
+	a := actions.NewRequireApp(expandPath(ac.App), do, fallback)
 	return a, nil
 }
 
@@ -226,4 +245,11 @@ func makeGestureAction(
 	}
 
 	return gestureAction{G: gm, A: a}, nil
+}
+
+func expandPath(path string) string {
+	if strings.HasPrefix(path, userHomeDirAlias) {
+		path = userHomeDir + path[len(userHomeDirAlias)-1:]
+	}
+	return path
 }

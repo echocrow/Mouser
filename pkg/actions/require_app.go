@@ -78,7 +78,7 @@ func (arc *appRunningChecker) run() bool {
 	if err != nil {
 		return false
 	}
-	// We pressume on average user-related apps are closer to the end than to the
+	// We presume on average user-related apps are closer to the end than to the
 	// start of the list of processes, thus we loop through in reverse.
 	for i := len(pss) - 1; i >= 0; i-- {
 		pid := int32(pss[i].Pid())

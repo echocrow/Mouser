@@ -8,6 +8,11 @@ import (
 	"github.com/shirou/gopsutil/v4/process"
 )
 
+const (
+	webAppExeSuffix = "/Web App"
+	webAppPathArg   = "--bundlepath"
+)
+
 // NewRequireApp creates an app-dependent action branch.
 func NewRequireApp(
 	app string,
@@ -98,6 +103,21 @@ func getPidPath(pid int32) string {
 
 func getProcessPath(p *process.Process) string {
 	path, _ := p.Exe()
+
+	// Patch paths for web apps.
+	if strings.HasSuffix(path, webAppExeSuffix) {
+		cmdline, _ := p.CmdlineSlice()
+		isBundlePath := false
+		for _, arg := range cmdline {
+			if isBundlePath {
+				path = arg
+				break
+			} else if arg == webAppPathArg {
+				isBundlePath = true
+			}
+		}
+	}
+
 	return path
 }
 

@@ -6,7 +6,7 @@
       "type": "go",
       "request": "launch",
       "mode": "debug",
-      "program": "${workspaceFolder}/cmd/mouser",
+      "program": "${workspaceFolder}/cmd/mouser"
     },
     {
       "name": "Launch mouser (Skip Cache)",

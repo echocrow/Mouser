@@ -14,20 +14,20 @@ Mouser currently supports macOS only. See [Development](#development) if you'd l
 - [Development](#development)
 - [Credits](#credits)
 
-
 ## Features
 
 ### Gestures
+
 - **Presses:** short press, long press, key down, key up
 - **Swipes:** swipe up/down/left/right
 - **Combined Gestures:** double/triple tap (two/three consecutive short presses), swipe pattern (e.g. swipe left > swipe right > swipe left)
 
 ### Actions
+
 - **Basic Actions:** control volume, media playback, trigger shortcuts, type text, run commands, etc.
 - **Toggle Actions:** repeat actions until stopped (e.g. repeat action while key is pressed)
 - **App-Specific Actions:** trigger a different action based on the current app
 - **App-Dependent Action:** trigger an action based on whether a given app is running (including background processes)
-
 
 ## Installation
 
@@ -36,7 +36,9 @@ Below you'll find the recommended ways to install Mouser.
 Alternatively, you can download Mouser from the [Releases](https://github.com/echocrow/Mouser/releases) page, or refer to [Development](#development) to build it yourself.
 
 ### macOS
+
 Via [Homebrew](https://brew.sh/):
+
 ```sh
 # Install:
 brew install echocrow/tap/mouser
@@ -46,22 +48,24 @@ brew upgrade echocrow/tap/mouser
 brew services start mouser
 ```
 
-
 ## Configuration
 
 Mouser uses a YAML file for its configuration.
 
 To get the default path to the config, run:
+
 ```sh
 ./mouser --config ?
 ```
 
 Alternatively, you can specify a custom path:
+
 ```sh
 mouser --config /path/to/config/file.yml
 ```
 
 The configuration file consists of these sections:
+
 - `mappings`: Lists optional aliases for keys and buttons.
 - `gestures`: Maps keys/buttons/aliases and gestures to actions.
 - `actions`: Contains custom actions.
@@ -86,6 +90,7 @@ gestures:
       action: io:tap
       args: [cmd, q]
 ```
+
 </details>
 
 <details>
@@ -123,7 +128,6 @@ gestures:
     hold: mac:quit-app
 
 actions:
-
   mac:prev-tab:
     action: io:tap
     args: [ctrl, shift, tab]
@@ -170,11 +174,13 @@ settings:
     init-delay: 250
     repeat-delay: 200
 ```
+
 </details>
 
 ### Configuration Details
 
 #### Gestures
+
 <details>
 <summary title="View Available Gestures">Available Gestures</summary>
 
@@ -197,6 +203,7 @@ settings:
 </details>
 
 #### Actions
+
 <details>
 <summary title="View Available Actions">Available Actions</summary>
 
@@ -210,27 +217,31 @@ settings:
 - `misc:none`: does nothing
 
 - `io:tap`: triggers a short key press & release; arguments:
-	- _modifiers…_: optional modifiers to hold during the key tap, e.g.
-	  `shift`, `cmd`, etc.
-	- _key_: the name of the key to tap, e.g. `f1`, `a`, `enter` etc
+
+  - _modifiers…_: optional modifiers to hold during the key tap, e.g.
+    `shift`, `cmd`, etc.
+  - _key_: the name of the key to tap, e.g. `f1`, `a`, `enter` etc
 
 - `io:type`: writes out the given text; arguments:
-	- _text_: the text to type out
+
+  - _text_: the text to type out
 
 - `io:scroll`: triggers a scroll event; arguments:
-	- _x_: the distance in pixels to scroll horizontally (left to right)
-	- _y_: the distance in pixels to scroll vertically (top to bottom)
+
+  - _x_: the distance in pixels to scroll horizontally (left to right)
+  - _y_: the distance in pixels to scroll vertically (top to bottom)
 
 - `os:open`: opens a file or application; arguments:
-	- _file_: the path to the file or application to open
-	- _openArgs…_: list of extra arguments to pass to the open command
+
+  - _file_: the path to the file or application to open
+  - _openArgs…_: list of extra arguments to pass to the open command
 
 - `os:cmd`: runs a custom command; arguments:
-	- _cmd_: the command name or path
-	- _cmdArgs…_: list of extra arguments to pass to the command
 
-- `misc:sleep`: pauses action execution for a given time; arguments:
-	- _duration_: the duration of the pause in milliseconds > 0
+  - _cmd_: the command name or path
+  - _cmdArgs…_: list of extra arguments to pass to the command
+
+- `misc:sleep`: pauses action execution for a given time; arguments: - _duration_: the duration of the pause in milliseconds > 0
 </details>
 
 <details>
@@ -275,9 +286,11 @@ actions:
     do: some-bg-app-action
     fallback: some-fallback-action
 ```
+
 </details>
 
 #### Settings
+
 <details>
 <summary title="View All Settings">All Settings</summary>
 
@@ -285,7 +298,6 @@ actions:
 # All times are in milliseconds.
 # All distances are in pixels.
 settings:
-
   # Enable verbose logging.
   debug: false
 
@@ -313,21 +325,22 @@ settings:
     # Default delay between subsequent repeats.
     repeat-delay: 100
 ```
-</details>
 
+</details>
 
 ## Troubleshooting
 
 ### macOS
+
 <details>
 <summary title="View Error: monitor initialization failed"><strong>Error:</strong> <code>monitor initialization failed</code></summary>
 
 Ensure you have granted the app the necessary permissions:
+
 1. Go to _System Perferences > Security & Privacy > Privacy > Accessibility_.
 1. Enable _mouser_.
 1. Restart Mouser.
 </details>
-
 
 ## Development
 
@@ -337,20 +350,25 @@ Ensure you have granted the app the necessary permissions:
 - **macOS:** `Xcode Command Line Tools`
 
 ### Dev Run/Test/Build
+
 #### Run
+
 ```sh
 make run
 ```
+
 #### Test
+
 ```sh
 make mock
 make test
 ```
+
 #### Build
+
 ```sh
 make build
 ```
-
 
 ## Credits
 

@@ -211,7 +211,7 @@ settings:
 - `vol:up`: increases the audio volume level
 - `vol:mute`: toggles between muting and unmuting audio
 - `media:toggle`: toggles between playing and pausing the current media
-- `media:prev`: rewindes the current or jumps back to the previous media record
+- `media:prev`: rewinds the current or jumps back to the previous media record
 - `media:next`: forwards to the next media record
 - `os:close-window`: closes the current window
 - `misc:none`: does nothing
@@ -313,7 +313,7 @@ settings:
   swipes:
     # Min distance until mouse movement is considered a swipe.
     min-dist: 30
-    # Max time repetitive identical swipe directions are surpressed.
+    # Max time repetitive identical swipe directions are suppressed.
     throttle: 250
     # Tick rate determining how often the current mouse position is checked for
     # a potential swipe gesture.
@@ -337,7 +337,7 @@ settings:
 
 Ensure you have granted the app the necessary permissions:
 
-1. Go to _System Perferences > Security & Privacy > Privacy > Accessibility_.
+1. Go to _System Preferences > Security & Privacy > Privacy > Accessibility_.
 1. Enable _mouser_.
 1. Restart Mouser.
 </details>
